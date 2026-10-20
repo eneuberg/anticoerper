@@ -1,0 +1,8 @@
+/* Grundlage. Farben, Schriften und Abstände kommen aus src/design/tokens.css. */
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ac-grund);color:var(--ac-text);overflow-x:hidden}
+img{max-width:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.sel{background:var(--ac-orange);color:var(--ac-auf-orange-gross);padding:0 .08em;-webkit-box-decoration-break:clone;box-decoration-break:clone}

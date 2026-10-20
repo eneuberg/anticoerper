@@ -1,0 +1,146 @@
+/*
+ * anticoerper – Design-Tokens.
+ * Alles unter dem Präfix --ac-.
+ * Gleiche Werte für JS/three.js: ./tokens.ts. Wer hier etwas ändert, ändert es dort mit.
+ *
+ * Aufbau:
+ *   :root                       empfohlene Palette „Feld“ + Form „weich“ + Schrift, Skala, Abstände, Bewegung
+ *   [data-ac-palette="nacht"]   Alternative: dunkel, hart, Grün auf Schwarz
+ *   [data-ac-palette="dunst"]   Alternative: weich, gedämpft, Nebel statt Fläche
+ *   [data-ac-form="hart"]       Kanten, Versatz-Schatten, dicke Linien (als Zitat, z. B. OS-Fenster)
+ *   [data-ac-form="weich"]      Rundungen, weiche Schatten, Unschärfe (Standard)
+ */
+
+:root{
+  /* ---------- Farbe: Palette „Feld“ (empfohlen) ---------- */
+  --ac-grund:#E3E9E5;          /* Seitenhintergrund: kühles Grau mit grünem Stich, kein Beige */
+  --ac-flaeche:#F4F7F5;        /* Karten, Fenster, alles was auf dem Grund liegt */
+  --ac-vertieft:#CDD7D1;       /* Bildfelder, Platzhalter, Leisten */
+  --ac-text:#121714;           /* Schrift: Schwarz mit grünem Stich */
+  --ac-leise:#4F5B54;          /* Nebentext, Labels (AA auf Grund und Fläche) */
+  --ac-linie:#B3BFB8;          /* feine Trennlinien (Deko, nicht für Text) */
+  --ac-gruen:#3BE565;          /* Signalfläche: füllt Bildschirme, nie Textfarbe auf hellem Grund */
+  --ac-gruen-tinte:#0A7033;    /* Grün als Schrift/Link auf hellem Grund (AA 5,05:1) */
+  --ac-orange:#E95420;         /* Markierung wie ausgewählter Text */
+  --ac-orange-tinte:#B53A0E;   /* Orange als Schrift auf hellem Grund (AA 4,77:1) */
+  --ac-tiefe:#14304A;          /* dritte Farbe: Tinte/Navy für dunkle Abschnitte, Schatten in 3D */
+  --ac-zart-gruen:#BDEFCB;     /* gedämpfter Zwischenton: weiche Flächen, Hover */
+  --ac-zart-orange:#F6BFA3;    /* gedämpfter Zwischenton: weiche Markierung im Fließtext */
+  --ac-auf-gruen:#121714;      /* Schrift auf Grün */
+  --ac-auf-orange:#121714;     /* Schrift auf Orange bei kleiner Schrift (4,97:1) */
+  --ac-auf-orange-gross:#FFFFFF; /* Weiß auf Orange nur ab 24px oder 19px fett (3,65:1, AA groß) */
+  --ac-auf-tiefe:#F4F7F5;
+  --ac-schatten-rgb:18 23 20;  /* Schattenfarbe als RGB-Tripel, damit Deckkraft frei bleibt */
+  --ac-glas:rgb(244 247 245 / .72); /* Milchglas-Fläche (mit --ac-unschaerfe) */
+
+  /* ---------- Form (Standard: weich) ---------- */
+  --ac-radius-s:8px;           /* Buttons, Tags, kleine Felder */
+  --ac-radius-m:16px;          /* Karten, Fenster, Fotos */
+  --ac-radius-l:32px;          /* große Felder, Hero-Flächen */
+  --ac-radius-rund:999px;      /* Pillen, Punkte */
+  --ac-linie-breite:1px;
+  --ac-unschaerfe:16px;        /* Milchglas hinter Fenstern und Leisten */
+  /* Rahmenfarbe, Schatten und Glas stehen unten im Block „zusammengesetzt“ */
+
+  /* ---------- Schrift ---------- */
+  --ac-font-display:"Big Shoulders Display",Impact,"Arial Narrow",sans-serif;
+  --ac-font-serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --ac-font-text:"Atkinson Hyperlegible Next","Atkinson Hyperlegible",system-ui,sans-serif;
+  --ac-font-label:"Martian Mono",ui-monospace,Menlo,monospace;
+
+  /* Skala: große Sprünge mit Absicht. Display-Stufen wachsen mit der Breite, Text bleibt ruhig. */
+  --ac-t-label:11px;           /* Martian Mono, klein (alles klein), Laufweite .08em, Breite 87.5%. Untergrenze: nichts kleiner als 11px */
+  --ac-t-klein:14px;
+  --ac-t-text:17px;
+  --ac-t-lead:clamp(20px, 1.1vw + 14px, 27px);
+  --ac-t-h3:clamp(28px, 1.6vw + 20px, 44px);
+  --ac-t-h2:clamp(48px, 5vw + 22px, 112px);
+  --ac-t-h1:clamp(80px, 13vw, 240px);
+  --ac-t-riesig:clamp(180px, 36vw, 640px);
+  --ac-zeile-display:.86;
+  --ac-zeile-text:1.5;
+  --ac-zeile-lead:1.32;
+  --ac-laufweite-label:.08em;
+
+  /* ---------- Raster und Abstände (4er-Schritte) ---------- */
+  --ac-a-1:4px; --ac-a-2:8px; --ac-a-3:12px; --ac-a-4:16px; --ac-a-5:24px;
+  --ac-a-6:32px; --ac-a-7:48px; --ac-a-8:64px; --ac-a-9:96px; --ac-a-10:144px;
+  --ac-seitenrand:clamp(16px, 4vw, 56px);
+  --ac-rinne:clamp(16px, 2vw, 32px);
+  --ac-spalten:12;
+  --ac-max:1440px;
+  --ac-sektion:clamp(72px, 9vw, 152px);  /* Abstand zwischen Abschnitten */
+  --ac-kopf-hoehe:56px;                   /* feste Kopfzeile, für scroll-margin */
+
+  /* ---------- Bewegung ---------- */
+  --ac-dauer-kurz:160ms;
+  --ac-dauer-mittel:320ms;
+  --ac-dauer-lang:640ms;
+  --ac-dauer-schweben:7s;
+  --ac-ease-ruhig:cubic-bezier(.2,.7,.2,1);      /* alle UI-Zustände: Hover, Einblenden, Umschalten */
+  --ac-ease-feder:cubic-bezier(.2,.9,.25,1.2);   /* nur Objekte/3D (Schweben, Andocken), nie Knöpfe, Karten oder Menüs */
+  --ac-ease-schweben:cubic-bezier(.45,0,.55,1);  /* Anti-Schwerkraft: auf und ab */
+}
+
+/* ---------- Alternative Paletten ---------- */
+[data-ac-palette="nacht"]{
+  --ac-grund:#0E1310; --ac-flaeche:#171E1A; --ac-vertieft:#222B25;
+  --ac-text:#E4ECE6; --ac-leise:#8F9C94; --ac-linie:#2E3832;
+  --ac-gruen:#3BE565; --ac-gruen-tinte:#3BE565;
+  --ac-orange:#FF6633; --ac-orange-tinte:#FF6633;
+  --ac-tiefe:#1F3B5C; --ac-zart-gruen:#1E4A2C; --ac-zart-orange:#4A2618;
+  --ac-auf-gruen:#0E1310; --ac-auf-orange:#0E1310; --ac-auf-orange-gross:#0E1310; --ac-auf-tiefe:#E4ECE6;
+  --ac-schatten-rgb:0 0 0;
+  --ac-glas:rgb(23 30 26 / .72);
+}
+[data-ac-palette="dunst"]{
+  --ac-grund:#DCE8E0; --ac-flaeche:#EEF4F0; --ac-vertieft:#C8D8CE;
+  --ac-text:#1F2C25; --ac-leise:#53625A; --ac-linie:#AFC2B6;
+  --ac-gruen:#3BE565; --ac-gruen-tinte:#116B33;
+  --ac-orange:#E95420; --ac-orange-tinte:#B23A10;
+  --ac-tiefe:#B9C3EE; --ac-zart-gruen:#A9EDBF; --ac-zart-orange:#F7B899;
+  --ac-auf-gruen:#1F2C25; --ac-auf-orange:#1F2C25; --ac-auf-orange-gross:#FFFFFF; --ac-auf-tiefe:#1F2C25;
+  --ac-schatten-rgb:31 44 37;
+  --ac-glas:rgb(238 244 240 / .66);
+}
+/* Feld explizit (falls ein Elternteil eine andere Palette setzt) */
+[data-ac-palette="feld"]{
+  --ac-grund:#E3E9E5; --ac-flaeche:#F4F7F5; --ac-vertieft:#CDD7D1;
+  --ac-text:#121714; --ac-leise:#4F5B54; --ac-linie:#B3BFB8;
+  --ac-gruen:#3BE565; --ac-gruen-tinte:#0A7033;
+  --ac-orange:#E95420; --ac-orange-tinte:#B53A0E;
+  --ac-tiefe:#14304A; --ac-zart-gruen:#BDEFCB; --ac-zart-orange:#F6BFA3;
+  --ac-auf-gruen:#121714; --ac-auf-orange:#121714; --ac-auf-orange-gross:#FFFFFF; --ac-auf-tiefe:#F4F7F5;
+  --ac-schatten-rgb:18 23 20;
+  --ac-glas:rgb(244 247 245 / .72);
+}
+
+/* ---------- Zusammengesetzt ----------
+ * Diese Werte lesen Farben (Text, Linie, Schatten). Sie stehen auf jedem Element mit Palette oder Form,
+ * damit sie dort neu ausgerechnet werden und nicht die Farben von :root behalten. */
+:root,[data-ac-palette],[data-ac-form]{
+  --ac-rand:var(--ac-linie);
+  --ac-schatten-1:0 1px 2px rgb(var(--ac-schatten-rgb) / .06), 0 10px 28px -10px rgb(var(--ac-schatten-rgb) / .22);
+  --ac-schatten-2:0 2px 6px rgb(var(--ac-schatten-rgb) / .06), 0 30px 70px -24px rgb(var(--ac-schatten-rgb) / .38);
+}
+
+/* ---------- Form: hart (Zitat) ---------- */
+[data-ac-form="hart"],[data-ac-form="hart"] [data-ac-palette]{
+  --ac-radius-s:0px; --ac-radius-m:0px; --ac-radius-l:0px; --ac-radius-rund:0px;
+  --ac-linie-breite:2px;
+  --ac-unschaerfe:0px;
+  --ac-rand:var(--ac-text);
+  --ac-schatten-1:4px 4px 0 var(--ac-text);
+  --ac-schatten-2:8px 8px 0 var(--ac-text);
+  --ac-glas:var(--ac-flaeche);
+}
+/* ---------- Form: weich (Standard, hier nur für Verschachtelung in „hart“) ---------- */
+[data-ac-form="weich"],[data-ac-form="weich"] [data-ac-palette]{
+  --ac-radius-s:8px; --ac-radius-m:16px; --ac-radius-l:32px; --ac-radius-rund:999px;
+  --ac-linie-breite:1px;
+  --ac-unschaerfe:16px;
+}
+
+@media (prefers-reduced-motion:reduce){
+  :root{ --ac-dauer-kurz:0ms; --ac-dauer-mittel:0ms; --ac-dauer-lang:0ms }
+}

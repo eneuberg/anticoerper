@@ -1,0 +1,39 @@
+/*
+ * Impressum und Datenschutz (Rechtliches.tsx).
+ * Rechtstexte stehen in normaler Schreibung: die Seite schreibt alles klein (teils mit #id *),
+ * darum hier mit höherer Spezifität text-transform:none.
+ */
+#v-experiment .rt-recht.rt-recht,
+#v-experiment .rt-recht.rt-recht *{text-transform:none}
+
+/* ---------- Text ---------- */
+.rt-text{font-family:var(--ac-font-text);font-size:17px;line-height:1.6;color:var(--ac-text);max-width:64ch}
+#v-experiment .rt-text section{padding:var(--ac-a-4) 0;border-top:1px solid var(--ac-linie)}
+#v-experiment .rt-text section:first-child{border-top:0;padding-top:0}
+#v-experiment .rt-text :is(h3,h4){margin:0 0 6px;font-family:var(--ac-font-text);font-size:17px;font-weight:700;line-height:1.35;letter-spacing:0}
+#v-experiment .rt-text p{margin:0;overflow-wrap:anywhere}
+.rt-text a{color:inherit;text-decoration-color:var(--ac-gruen-tinte, currentColor);text-underline-offset:.16em}
+
+/* ---------- Dialog (G, H) ---------- */
+.rt-dialog{padding:0;border:0;margin:auto;width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);max-height:min(86dvh,900px);
+  border-radius:var(--ac-radius-l);background:var(--ac-flaeche);color:var(--ac-text);box-shadow:var(--ac-schatten-2);overflow:auto;overscroll-behavior:contain}
+.rt-dialog::backdrop{background:rgb(14 19 16 / .5)}
+.rt-dialog[open]{animation:rt-auf 260ms var(--ac-ease-ruhig, ease-out)}
+@keyframes rt-auf{from{opacity:0;transform:translate3d(0,14px,0)}}
+html:has(.rt-dialog[open]){overflow:hidden}
+.rt-innen{padding:0 clamp(20px,4vw,48px) clamp(28px,4vw,48px)}
+.rt-leiste{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 calc(-1 * clamp(20px,4vw,48px));padding:14px clamp(14px,3vw,32px) 12px clamp(20px,4vw,48px);background:var(--ac-flaeche);border-bottom:1px solid var(--ac-linie)}
+.rt-wahl{display:flex;gap:4px;flex-wrap:wrap}
+.rt-wahl button,.rt-zu{min-height:40px;border:0;border-radius:var(--ac-radius-rund, 999px);background:transparent;color:var(--ac-text);cursor:pointer;
+  font:500 15px/1 var(--ac-font-text);transition:background-color var(--ac-dauer-kurz, 150ms) var(--ac-ease-ruhig, ease-out)}
+.rt-wahl button{padding:0 16px}
+.rt-wahl button:hover,.rt-zu:hover{background:var(--ac-vertieft)}
+.rt-wahl button[aria-pressed="true"]{background:var(--ac-text);color:var(--ac-flaeche)}
+.rt-zu{display:grid;place-items:center;width:40px;padding:0;flex:none}
+.rt-dialog :focus-visible{outline:2px solid var(--ac-text);outline-offset:3px}
+#v-experiment .rt-titel{margin:clamp(20px,3vw,32px) 0 var(--ac-a-5);font-family:var(--ac-font-display);font-weight:800;font-size:clamp(40px,5vw,64px);line-height:.95}
+
+@media (prefers-reduced-motion:reduce){
+  .rt-dialog[open]{animation:none}
+}

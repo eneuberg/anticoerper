@@ -1,0 +1,85 @@
+/*
+ * anticoerper – gemeinsame Bausteine. Alle Klassen mit Präfix .ac-, alle Werte aus tokens.css.
+ * Form (hart/weich) und Palette schalten über data-ac-form / data-ac-palette an einem Elternelement um.
+ * React-Hüllen dazu: ./Bausteine.tsx und ../components/Logo.tsx.
+ */
+
+/* nur für Screenreader */
+.ac-unsichtbar{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---------- Schrift-Helfer ---------- */
+.ac-label{font-family:var(--ac-font-label);font-size:var(--ac-t-label);font-stretch:87.5%;font-weight:500;text-transform:lowercase;letter-spacing:var(--ac-laufweite-label);line-height:1.3}
+.ac-serif{font-family:var(--ac-font-serif);font-style:italic;font-weight:400}
+.ac-display{font-family:var(--ac-font-display);font-weight:800;text-transform:lowercase;line-height:var(--ac-zeile-display);letter-spacing:0}
+.ac-lead{font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
+
+/* ---------- Markierung: wie ausgewählter Text ---------- */
+.ac-mark{background:var(--ac-orange);color:var(--ac-auf-orange);padding:0 .12em;margin:0 -.04em;border-radius:min(var(--ac-radius-s),.18em);
+  -webkit-box-decoration-break:clone;box-decoration-break:clone}
+/* ab 24px bzw. 19px fett darf die Schrift weiß sein (Kontrast 3,65:1 = AA groß) */
+.ac-mark-gross{color:var(--ac-auf-orange-gross)}
+/* weiche Markierung für Fließtext: Apricot statt Signal */
+.ac-mark-zart{background:var(--ac-zart-orange);color:var(--ac-text);padding:0 .12em;border-radius:min(var(--ac-radius-s),.18em);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.ac-mark-gruen{background:var(--ac-gruen);color:var(--ac-auf-gruen);padding:0 .12em;border-radius:min(var(--ac-radius-s),.18em);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+
+/* ---------- Abschnittskopf: Nummer, Titel, Zähler. Orientierung beim Scrollen. ---------- */
+.ac-kopf{display:grid;grid-template-columns:1fr auto;align-items:end;gap:var(--ac-a-2) var(--ac-a-5);
+  border-top:var(--ac-linie-breite) solid var(--ac-text);padding-top:var(--ac-a-3);margin-bottom:clamp(32px,4vw,64px);scroll-margin-top:var(--ac-kopf-hoehe)}
+/* Meta-Zeile nur mit Nummer und Gesamtzahl („03 / 09“). Der Name steht einmal, als Titel darunter. */
+.ac-kopf-meta{grid-column:1/-1;display:flex;justify-content:space-between;gap:var(--ac-a-4);color:var(--ac-leise);font-variant-numeric:tabular-nums}
+.ac-kopf-nr{color:var(--ac-leise)}
+.ac-kopf-nr b{font-weight:600;color:var(--ac-orange-tinte)}
+.ac-kopf-titel{grid-column:1/-1;margin:var(--ac-a-2) 0 0;font-family:var(--ac-font-display);font-weight:800;text-transform:lowercase;font-size:var(--ac-t-h2);line-height:var(--ac-zeile-display);overflow-wrap:anywhere;min-width:0}
+.ac-kopf-zeile{grid-column:1/-1;margin:var(--ac-a-3) 0 0;font-family:var(--ac-font-serif);font-style:italic;font-size:var(--ac-t-lead);line-height:1.3;max-width:40ch;color:var(--ac-text);text-wrap:pretty}
+
+/* ---------- Fortschritt (unter der Kopfzeile) ---------- */
+.ac-fortschritt{position:absolute;left:0;bottom:-1px;height:3px;width:100%;background:var(--ac-gruen);transform-origin:0 50%;transform:scaleX(var(--p,0));border-radius:0 var(--ac-radius-rund) var(--ac-radius-rund) 0}
+
+/* ---------- Fokus: sichtbar auf Grund, Fläche und Grün (Text-Farbe, nicht Orange: Orange auf Grund hat nur 2,5:1) ---------- */
+.ac-knopf:focus-visible{outline:2px solid var(--ac-text);outline-offset:3px}
+
+/* ---------- Chip / Tag (höchstens vier) ---------- */
+.ac-chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.ac-chip{display:inline-flex;align-items:center;min-height:24px;padding:2px 10px;border:var(--ac-linie-breite) solid var(--ac-rand);border-radius:var(--ac-radius-rund);background:var(--ac-flaeche);
+  font-family:var(--ac-font-label);font-size:var(--ac-t-label);font-stretch:87.5%;text-transform:lowercase;letter-spacing:.06em;color:var(--ac-text);white-space:nowrap}
+
+/* ---------- Knopf: ein Signal pro Zustand (Farbe), kein Springen ---------- */
+.ac-knopf{display:inline-flex;align-items:center;gap:.5em;min-height:44px;padding:0 20px;border-radius:var(--ac-radius-rund);background:var(--ac-text);color:var(--ac-grund);
+  font:600 15px/1 var(--ac-font-text);white-space:nowrap;border:var(--ac-linie-breite) solid var(--ac-text);cursor:pointer;
+  transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig),color var(--ac-dauer-kurz) var(--ac-ease-ruhig),border-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.ac-knopf:hover{background:var(--ac-gruen);color:var(--ac-auf-gruen);border-color:var(--ac-gruen)}
+.ac-knopf:active{background:var(--ac-gruen-tinte);border-color:var(--ac-gruen-tinte);color:var(--ac-auf-tiefe)}
+.ac-knopf:disabled,.ac-knopf[aria-disabled="true"]{background:var(--ac-vertieft);border-color:var(--ac-vertieft);color:var(--ac-leise);cursor:not-allowed}
+.ac-knopf-leise{background:transparent;color:var(--ac-text);border-color:var(--ac-rand)}
+.ac-knopf-leise:hover{background:var(--ac-zart-gruen);color:var(--ac-text);border-color:var(--ac-text)}
+[data-ac-form="hart"] .ac-knopf{box-shadow:var(--ac-schatten-1)}
+[data-ac-form="hart"] .ac-knopf:active{box-shadow:none;transform:translate(4px,4px)}
+
+/* ---------- Foto / Ausschnitt ---------- */
+.ac-foto{position:relative;border-radius:var(--ac-radius-m);overflow:hidden;background:var(--ac-vertieft);box-shadow:var(--ac-schatten-1);margin:0}
+.ac-foto img{display:block;width:100%;height:100%;object-fit:cover}
+.ac-foto figcaption{position:absolute;left:var(--ac-a-3);bottom:var(--ac-a-3);max-width:calc(100% - 24px);padding:3px 8px;border-radius:var(--ac-radius-s);background:var(--ac-glas);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--ac-text)}
+
+/* ---------- Grünes Feld: füllt die Breite, Schrift schwarz ---------- */
+.ac-feld{background:var(--ac-gruen);color:var(--ac-auf-gruen);border-radius:var(--ac-radius-l)}
+/* weich: Licht im Feld statt flacher Fläche. Der einzige Verlauf im System, der nicht eine Bühne für ein Objekt ist. */
+.ac-feld-licht{background:radial-gradient(120% 90% at 78% 18%,color-mix(in srgb,var(--ac-gruen) 55%,#fff) 0%,var(--ac-gruen) 46%,color-mix(in srgb,var(--ac-gruen) 82%,var(--ac-tiefe)) 100%)}
+[data-ac-form="hart"] .ac-feld-licht{background:var(--ac-gruen)}
+
+/* ---------- 3D-Render: Platz und Bühne für Objekte aus src/raum ---------- */
+.ac-render{position:relative;display:grid;place-items:center;border-radius:var(--ac-radius-l);overflow:hidden;
+  background:radial-gradient(70% 60% at 50% 42%,var(--ac-flaeche),var(--ac-grund) 70%,var(--ac-vertieft))}
+.ac-render::after{content:"";position:absolute;left:28%;right:28%;bottom:14%;height:7%;border-radius:50%;background:rgb(var(--ac-schatten-rgb) / .28);filter:blur(14px)}
+.ac-render > *{position:relative;z-index:1}
+
+/* ---------- Logo-Lockup und Schweben ---------- */
+.ac-logo{display:inline-block;vertical-align:middle;flex:none;overflow:visible}
+.ac-lw{display:inline-flex;align-items:center;gap:.32em;font-family:var(--ac-font-text);font-weight:700;letter-spacing:-.01em;line-height:1;white-space:nowrap}
+.ac-lw-zeichen{width:1.55em;height:1.55em}
+.ac-lw-gestapelt{flex-direction:column;gap:.4em}
+.ac-lw-gestapelt .ac-lw-zeichen{width:2.6em;height:2.6em}
+.ac-logo-schwebt .ac-logo-punkt{animation:ac-schweben var(--ac-dauer-schweben) var(--ac-ease-schweben) infinite}
+/* px = Einheiten im 64er-Raster des Logos */
+@keyframes ac-schweben{0%,100%{transform:translateY(0)}50%{transform:translateY(-3.5px)}}
+@media (prefers-reduced-motion:reduce){.ac-logo-schwebt .ac-logo-punkt{animation:none}}

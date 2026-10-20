@@ -1,0 +1,512 @@
+/*
+ * Die Seite. Alles unter #v-experiment, Werte aus src/design/tokens.css.
+ * Bewegung nur über transform/opacity. Effekte, die Bewegung brauchen, hängen an .x-bewegt
+ * (fehlt bei prefers-reduced-motion): ohne die Klasse steht alles still und ist trotzdem vollständig.
+ * Schreibweise: alles klein, wie getippt. Ausnahme nur Code.
+ */
+
+#v-experiment{background:var(--ac-grund);color:var(--ac-text);font-family:var(--ac-font-text);font-size:var(--ac-t-text);line-height:var(--ac-zeile-text);
+  overflow-x:clip;text-transform:lowercase;padding-bottom:0}
+/* Bausteine setzen Versalien; hier überall klein */
+#v-experiment :is(.ac-label,.ac-kopf-titel,.ac-display,.ac-chip,.ac-karte h3){text-transform:lowercase}
+#v-experiment :is(button,input,select,textarea){text-transform:lowercase}
+#v-experiment code{text-transform:none}
+#v-experiment ::selection{background:var(--ac-orange);color:var(--ac-auf-orange-gross)}
+#v-experiment :focus-visible{outline:2px solid var(--ac-text);outline-offset:3px}
+#v-experiment h3,#v-experiment h4,#v-experiment h5{margin:0}
+#v-experiment .ph{background:var(--ac-zart-orange);color:var(--ac-text);border-radius:4px;padding:0 3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+#v-experiment .ac-kopf-zeile{line-height:1.3}
+
+.x-rahmen{max-width:var(--ac-max);margin:0 auto;padding-inline:var(--ac-seitenrand)}
+/* Lesemaß für Fließtext in Projekten: rund 60–65 Zeichen pro Zeile (Atkinson: 60ch wären hier fast 80 Zeichen, 28em sind rund 62) */
+#v-experiment{--x-mass:28em}
+/* Vorlesetext der Buchstaben-Wörter nicht doppelt mitkopieren */
+.xa-text{user-select:none;-webkit-user-select:none}
+.x-sek{padding-top:var(--ac-sektion)}
+.x-platzhalter{display:grid;place-items:center;width:100%;height:100%;min-height:140px;background:var(--ac-vertieft);color:var(--ac-leise);font-size:var(--ac-t-klein);border-radius:inherit;text-align:center;padding:12px}
+
+/* ---------- Einblenden (einmal, per IntersectionObserver) ---------- */
+.x-bewegt .x-rein{opacity:0;transform:translate3d(0,28px,0)}
+.x-bewegt .x-rein.da{opacity:1;transform:none;transition:opacity var(--ac-dauer-lang) var(--ac-ease-ruhig),transform var(--ac-dauer-lang) var(--ac-ease-ruhig)}
+/* Objekte (Renders, Foto) fliegen schräg herein und federn: nur bei Objekten erlaubt (DESIGN §9) */
+.x-bewegt .x-rein.x-objekt{transform:translate3d(7vw,9vh,0) rotate(9deg)}
+.x-bewegt .x-rein.x-objekt.da{transform:none;transition:opacity 500ms var(--ac-ease-ruhig),transform 1100ms var(--ac-ease-feder)}
+
+/* ================= Kapsel: Nummer, Titel, Fortschritt ================= */
+.x-kapsel{position:fixed;top:14px;left:14px;z-index:40;max-width:calc(100vw - 28px);
+  transform:translate3d(0,-150%,0);opacity:0;pointer-events:none;
+  transition:transform var(--ac-dauer-lang) var(--ac-ease-ruhig),opacity var(--ac-dauer-mittel) var(--ac-ease-ruhig)}
+.x-kapsel.an,.x-kapsel:focus-within{transform:none;opacity:1;pointer-events:auto}
+/* Band hinter der Kapsel, volle Breite, Flächenfarbe des Abschnitts darunter, nach unten auslaufend. Bewusst ohne
+   backdrop-filter: das Weichzeichnen kostete beim Scrollen messbar Bilder (p95 16,8 → 33 ms ohne GPU). */
+.x-band{position:fixed;top:0;left:0;right:0;z-index:39;height:84px;pointer-events:none;opacity:0;background-color:var(--ac-grund);
+  -webkit-mask-image:linear-gradient(#000 48%,transparent);mask-image:linear-gradient(#000 48%,transparent);
+  transition:opacity var(--ac-dauer-mittel) var(--ac-ease-ruhig),background-color var(--ac-dauer-mittel) var(--ac-ease-ruhig)}
+.x-band.an{opacity:1}
+.x-band[data-farbe="gruen"]{background-color:var(--ac-gruen)}
+.x-band[data-farbe="navy"]{background-color:var(--x-navy)}
+.x-kapsel-knopf{position:relative;display:flex;align-items:center;gap:10px;height:50px;max-width:100%;padding:0 20px 2px 14px;border-radius:var(--ac-radius-rund);
+  background:var(--ac-flaeche);color:var(--ac-text);border:var(--ac-linie-breite) solid var(--ac-rand);box-shadow:var(--ac-schatten-1);overflow:hidden;cursor:pointer;
+  transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-kapsel-knopf:hover{background:var(--ac-zart-gruen)}
+.x-kapsel-knopf[aria-expanded="true"]{background:var(--ac-zart-gruen)}
+.x-kapsel-zeichen{flex:none}
+.x-kapsel-nr{display:flex;flex:none;font:900 30px/1 var(--ac-font-display);font-variant-numeric:tabular-nums;color:var(--ac-orange-tinte)}
+.x-kapsel-null,.x-kapsel-rolle{display:block;height:1em;overflow:hidden}
+.x-kapsel-rolle > span{display:flex;flex-direction:column;transform:translate3d(0,calc(var(--n,0) * -1em),0);transition:transform 560ms var(--ac-ease-ruhig)}
+.x-kapsel-rolle > span > span{display:block;height:1em}
+.x-kapsel-ges{flex:none;color:var(--ac-leise)}
+.x-kapsel-titel{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:var(--ac-font-serif);font-style:italic;font-size:21px;line-height:1.3;padding-left:2px}
+.x-kapsel-wechsel{display:inline-block;animation:x-kapsel-rein 420ms var(--ac-ease-ruhig) both}
+.x-kapsel-unter{color:var(--ac-leise)}
+@keyframes x-kapsel-rein{from{opacity:0;transform:translate3d(0,.45em,0)}}
+.x-kapsel-balken{position:absolute;left:16px;right:16px;bottom:6px;height:3px;border-radius:var(--ac-radius-rund);background:var(--ac-vertieft);overflow:hidden}
+.x-kapsel-fort{position:absolute;inset:0;background:var(--ac-gruen-tinte);transform-origin:0 50%;transform:scaleX(var(--p,0));border-radius:inherit}
+.x-kapsel-fort.css{animation:x-fort linear both;animation-timeline:scroll(root block)}
+@keyframes x-fort{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+.x-menue{margin-top:8px;width:max-content;max-width:calc(100vw - 28px);max-height:calc(100svh - 190px);overflow:auto;padding:8px;
+  background:var(--ac-flaeche);border:var(--ac-linie-breite) solid var(--ac-rand);border-radius:var(--ac-radius-m);box-shadow:var(--ac-schatten-2)}
+.x-menue ol{list-style:none;margin:0;padding:0}
+.x-menue button{display:flex;align-items:baseline;gap:12px;width:100%;min-height:40px;padding:8px 14px 8px 10px;border-radius:var(--ac-radius-s);text-align:left;
+  font:500 17px/1.25 var(--ac-font-text);color:var(--ac-text);cursor:pointer;transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-menue button .ac-label{color:var(--ac-leise);min-width:3.6em}
+.x-menue button:hover{background:var(--ac-zart-gruen)}
+.x-menue button[aria-current="true"]{background:var(--ac-text);color:var(--ac-grund)}
+.x-menue button[aria-current="true"] .ac-label{color:inherit}
+.x-menue-unter{padding-left:22px !important}
+.x-menue-unter button{font-size:15px;min-height:36px}
+
+/* ================= 01 Titel ================= */
+.x-titel{position:relative;height:100vh;height:100svh;min-height:540px;z-index:1}
+.x-titel-name{position:absolute;left:0;right:0;bottom:21%;padding-inline:var(--ac-seitenrand);z-index:1}
+.x-name{position:relative;display:inline-block;white-space:nowrap;margin:0;font-family:var(--ac-font-display);font-weight:900;font-size:100px;line-height:.78;
+  letter-spacing:-.006em;text-transform:none}
+.xa{position:relative}
+.xa-b{display:inline-block;will-change:transform}
+.xa-warten .xa-b{opacity:0}
+/* das Zeichen dockt von oben an den Namen an und bleibt davor stehen */
+.x-titel-zeichen{position:absolute;z-index:2;right:12%;bottom:calc(21% + 1.5vw);width:min(30vw,46vh);aspect-ratio:1;color:var(--ac-gruen)}
+.x-titel-zeichen svg{position:relative;z-index:1;width:100%;height:100%;will-change:transform}
+.x-titel-schatten{position:absolute;left:24%;right:24%;bottom:-9%;height:7%;border-radius:50%;background:rgb(var(--ac-schatten-rgb) / .2);filter:blur(12px)}
+.x-bewegt .x-titel-zeichen{animation:x-andocken 1500ms var(--ac-ease-feder) 700ms both}
+@keyframes x-andocken{from{opacity:0;transform:translate3d(-8vw,-70vh,0) rotate(-28deg)}30%{opacity:1}}
+.x-titel-pfeil{position:absolute;left:var(--ac-seitenrand);bottom:28px;font-size:16px;color:var(--ac-leise)}
+
+/* ================= 02 These ================= */
+.x-these{position:relative}
+/* der Körper darf nach oben in den Titel wachsen, seitlich und unten wird abgeschnitten */
+.x-bewegt .x-these{clip-path:inset(-100vh 0 0 0)}
+.x-these-bahn{position:relative}
+.x-these-pin{position:relative;display:flex;align-items:center}
+.x-these-kreis{display:none}
+.x-bewegt .x-these-bahn{height:175vh}
+.x-bewegt .x-these-pin{position:sticky;top:0;height:100vh;height:100svh}
+.x-bewegt .x-these-kreis{display:block;position:absolute;left:50%;top:50%;width:128vmax;height:128vmax;border-radius:50%;background:var(--ac-gruen);
+  transform:translate(-50%,-50%) scale(.03);will-change:transform}
+.x-bewegt .x-these-pin.gefuellt{background:var(--ac-gruen)}
+.x-bewegt .x-these-pin.gefuellt .x-these-kreis{visibility:hidden}
+#v-experiment:not(.x-bewegt) .x-these-pin{background:var(--ac-gruen);padding-top:var(--ac-sektion);border-radius:var(--ac-radius-l) var(--ac-radius-l) 0 0}
+.x-these-innen{position:relative;width:100%;color:var(--ac-auf-gruen)}
+.x-these .ac-kopf{border-top-color:var(--ac-auf-gruen);margin-bottom:clamp(20px,2.4vw,40px)}
+/* der Titel „these“ ist hier nur Wegweiser: der Satz darunter ist das Laute */
+.x-these .ac-kopf-titel{font-size:clamp(34px,2.6vw + 18px,64px)}
+.x-these .ac-kopf-nr,.x-these .ac-kopf-nr b{color:var(--ac-auf-gruen)}
+.x-these-satz{margin:0;max-width:1240px}
+.x-these-laut{display:block;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(58px,8.6vw,156px);line-height:.88}
+.x-these-leise{display:block;margin-top:.14em;font-family:var(--ac-font-serif);font-style:italic;font-size:clamp(50px,7.2vw,128px);line-height:1.04}
+.x-w{position:relative;z-index:0;display:inline-block;transition:color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-w::before{content:"";position:absolute;z-index:-1;left:-.05em;right:-.22em;top:.04em;bottom:-.02em;background:var(--ac-orange);border-radius:min(10px,.1em);
+  transform:scaleX(var(--w,0));transform-origin:0 50%;will-change:transform}
+.x-these-leise .x-w::before{top:.16em;bottom:.06em}
+.x-w.voll{color:var(--ac-auf-orange-gross)}
+.x-these-text{position:relative;background:var(--ac-gruen);color:var(--ac-auf-gruen);padding:var(--ac-a-8) 0 var(--ac-sektion);border-radius:0 0 var(--ac-radius-l) var(--ac-radius-l)}
+.x-these-unten{position:relative}
+/* Platine: ragt aus dem Text nach oben in die leere Unterkante der Bühne, rechts unter dem Satz. Festes Seitenverhältnis. */
+.x-these-platine{position:absolute;z-index:2;right:calc(var(--ac-seitenrand) - 3vw);top:calc(-1 * clamp(150px,17vw,300px));width:min(44vw,700px);
+  pointer-events:none;transform:rotate(-6deg);will-change:transform}
+.x-these-platine-bild{display:block;width:100%;height:auto;aspect-ratio:1600/874}
+#v-experiment:not(.x-bewegt) .x-these-pin{padding-bottom:clamp(140px,16vw,280px)}
+
+/* früher → heute: zwei versetzte Stufen, beide gleich groß, heute rückt unter die Platine. Danach der Schlussabsatz als ruhiger Satz. */
+.x-these-folge{container-type:inline-size;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--ac-rinne);row-gap:clamp(40px,4.4vw,72px);align-items:start}
+.x-stufe{grid-column:1/5;grid-row:1;margin:0;padding-top:var(--ac-a-3);border-top:var(--ac-linie-breite) solid rgb(18 23 20 / .38);
+  font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
+.x-stufe:nth-child(2){grid-column:5/10;margin-top:clamp(150px,15cqi,230px)}
+.x-stufe:nth-child(n+3){grid-column:7/13;grid-row:auto}
+.x-stufe-wort{display:block;margin:0 0 var(--ac-a-4);font-family:var(--ac-font-display);font-weight:900;line-height:.8;letter-spacing:-.005em;
+  font-size:clamp(60px,6.4cqi,96px)}
+.x-stufe-rest{display:block;max-width:31ch}
+/* Schluss: ein Satz in Vorspann-Größe über die linke Hälfte, darunter die Namenserklärung in Fließtext */
+.x-these-schluss{margin:var(--ac-a-8) 0 0;max-width:34ch;padding-top:var(--ac-a-3);border-top:var(--ac-linie-breite) solid rgb(18 23 20 / .38);
+  font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
+.x-these-name{margin:var(--ac-a-5) 0 0;max-width:var(--x-mass);font-size:var(--ac-t-text);line-height:var(--ac-zeile-text);text-wrap:pretty}
+
+/* ================= 03 Erik: Zeitungsseite ================= */
+.x-zeitung{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--ac-rinne);border-top:5px double var(--ac-text)}
+/* Text links (Spalten 1–8), Foto rechts (9–12) in seiner eigenen Spur: es liegt schräg auf der Doppellinie und bricht oben
+   aus dem Satzspiegel aus, verdeckt aber keinen Text. Die Leiste endet vor dem Foto, damit auch „köln“ lesbar bleibt. */
+.x-zeitung-titel{grid-column:1/9;grid-row:1;position:relative;z-index:1;margin:var(--ac-a-5) 0 0 !important;font-family:var(--ac-font-display);font-weight:900;
+  font-size:clamp(56px,7.4vw,136px);line-height:.84;text-wrap:balance;overflow-wrap:anywhere}
+.x-zeitung-foto{grid-column:9/13;grid-row:1/4;align-self:start;position:relative;z-index:2;margin:calc(-1 * var(--ac-a-5)) 0 0 var(--ac-a-4);aspect-ratio:4/5;rotate:3deg;
+  border-radius:var(--ac-radius-m);overflow:hidden;background:var(--ac-vertieft);box-shadow:var(--ac-schatten-2)}
+.x-zeitung-foto img{display:block;width:100%;height:100%;object-fit:cover}
+.x-zeitung-unter{grid-column:1/8;grid-row:2;margin:var(--ac-a-5) 0 0;font-size:clamp(26px,2.5vw,40px);line-height:1.16;text-wrap:balance}
+/* Text: eine Spalte in Fließtextgröße, der erste Absatz als Vorspann */
+.x-zeitung-spalten{grid-column:1/9;grid-row:3;margin-top:var(--ac-a-6);padding-top:var(--ac-a-4);border-top:var(--ac-linie-breite) solid var(--ac-text);text-align:left}
+.x-zeitung-spalten p{margin:0 0 .9em;max-width:var(--x-mass);text-wrap:pretty}
+.x-zeitung-spalten p:first-child{max-width:40ch;margin-bottom:var(--ac-a-4);font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead)}
+
+/* ================= 04 Was ich anbiete ================= */
+.x-angebot-raster{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--ac-a-6) var(--ac-a-8);align-items:start}
+.x-angebot-spalte{position:sticky;top:12vh;height:74vh}
+.x-angebot-buehne{position:absolute;inset:0;will-change:transform}
+/* Canvas nur so groß wie nötig: jedes Pixel kostet beim Rendern */
+.x-angebot-3d{position:absolute !important;inset:0 -6% 0 -4%}
+.x-angebot-bild{display:block;width:100%;height:100%;object-fit:contain}
+.x-angebot-spalte{grid-row:1/span 2}
+/* Leistungen: die erste groß (Titel, darunter der Satz im Vorspann-Maß), die übrigen als Zeilen mit Titel links und Satz rechts.
+   Linien trennen, keine Karten. Die Zeile in der Bildmitte bekommt eine kräftige Linie (aktiv). */
+.x-angebot-liste{list-style:none;margin:0;padding:0}
+.x-leistung{position:relative;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:var(--ac-a-3) var(--ac-a-6);align-items:baseline;
+  padding:var(--ac-a-6) 0 var(--ac-a-7);border-top:var(--ac-linie-breite) solid var(--ac-linie);transition:border-color var(--ac-dauer-mittel) var(--ac-ease-ruhig)}
+.x-leistung::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:var(--ac-text);transform:scaleX(0);transform-origin:0 50%;
+  transition:transform var(--ac-dauer-lang) var(--ac-ease-ruhig)}
+.x-leistung.aktiv::before{transform:scaleX(1)}
+.x-leistung h3{font-family:var(--ac-font-display);font-weight:800;font-size:clamp(34px,1.6vw + 22px,52px);line-height:.92;text-wrap:balance}
+.x-leistung p{margin:0;font-size:18px;line-height:1.5;max-width:34ch;text-wrap:pretty}
+.x-leistung-haupt{grid-template-columns:minmax(0,1fr);gap:var(--ac-a-5);padding:var(--ac-a-5) 0 var(--ac-a-8);border-top-color:var(--ac-text)}
+.x-leistung-haupt h3{font-size:clamp(52px,3.6vw + 24px,104px);line-height:.86;max-width:10ch}
+.x-leistung-haupt p{font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);max-width:30ch;margin-left:auto;margin-right:0;width:min(100%,30ch)}
+/* Abschluss: nur der Knopf zum Kontakt */
+.x-leistung:last-child{padding-bottom:var(--ac-a-5)}
+.x-angebot-cta{grid-column:2;margin:var(--ac-a-6) 0 0;padding-top:var(--ac-a-6);border-top:2px solid var(--ac-text)}
+.x-angebot-knopf{min-height:52px;padding:0 26px;font-size:18px;text-decoration:none}  /* <a> als Knopf: ohne Browser-Unterstreichung */
+.x-angebot{padding-bottom:var(--ac-a-8)}
+
+/* ================= 05 Projekte ================= */
+.x-p-index ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-p-index a{display:flex;flex-direction:column;gap:6px;min-height:44px;padding:12px 16px 12px 0;color:var(--ac-text);text-decoration:none;
+  font-family:var(--ac-font-display);font-weight:800;font-size:clamp(22px,2vw,30px);line-height:.95;transition:color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-p-index a .ac-label{color:var(--ac-orange-tinte)}
+.x-p-index a:hover{color:var(--ac-gruen-tinte)}
+.x-p{padding-top:var(--ac-sektion);scroll-margin-top:88px}
+/* Metazeilen: Wörter in Atkinson, nur Zahlen in Martian Mono (DESIGN §12) */
+.x-p-kopf,.x-meldung-meta{font-size:var(--ac-t-klein);line-height:1.4}
+.x-p-kopf{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;padding-top:var(--ac-a-3);border-top:var(--ac-linie-breite) solid var(--ac-text);color:var(--ac-leise)}
+.x-p-kopf b{color:var(--ac-orange-tinte);font-weight:600}
+
+/* 05.1 Exoskelett: Hand / exo / skelett, das Modul liegt auf der Schrift */
+.x-exo-buehne{position:relative;margin-top:var(--ac-a-5)}
+.x-exo-titel{position:relative;z-index:1;display:flex;flex-direction:column;font-family:var(--ac-font-display);font-weight:900;line-height:.8}
+.x-exo-titel > span{font-size:clamp(92px,17vw,290px)}
+/* einzeiliger Titel („felya labs“): Platz für die Unterlänge, damit das y nicht in den Satz darunter ragt */
+.x-exo-titel > span:only-child{padding-bottom:.17em}
+.x-exo-titel > span:last-child{margin-left:6vw}
+.x-exo-titel > .x-exo-kursiv{font-family:var(--ac-font-serif);font-style:italic;font-weight:400;font-size:clamp(72px,11vw,190px);line-height:.62;margin-left:20vw;color:var(--ac-orange-tinte)}
+.x-exo-bild{position:absolute;z-index:2;right:-3vw;top:30%;width:min(58vw,900px);pointer-events:none}
+img.x-exo-bild,img.x-auftrag-bild,img.x-zahl-bild{height:auto}
+.x-exo-raster{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--ac-a-6) var(--ac-a-8);margin-top:var(--ac-a-8)}
+.x-exo-satz{margin:0 0 var(--ac-a-4);font-size:clamp(24px,2vw,32px);line-height:1.25;text-wrap:pretty}
+.x-exo-rolle{margin:0 0 var(--ac-a-4);color:var(--ac-leise);font-size:var(--ac-t-klein)}
+.x-exo-schritte{list-style:none;margin:0;padding:0}
+.x-exo-schritte li{padding:var(--ac-a-5) 0;border-top:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-exo-schritte h4{font-family:var(--ac-font-display);font-weight:800;font-size:var(--ac-t-h3);line-height:.95;margin-bottom:var(--ac-a-2) !important}
+.x-exo-schritte p{margin:0;max-width:var(--x-mass)}
+
+/* Projektfotos und Clip: rechteckig, runde Ecken, weicher Schatten (.ac-foto), festes Seitenverhältnis */
+.x-bild{margin:0;min-width:0;display:grid;gap:8px;align-content:start}
+/* bis das Foto da ist, steht seine unscharfe Vorschau im Rahmen (Hintergrund aus experiment/vorschau.ts) */
+.x-bild-rahmen{aspect-ratio:var(--r,4/3);width:100%;background-size:cover;background-position:center}
+.x-bild-rahmen::before{content:"";position:absolute;inset:0;background:inherit;filter:blur(14px);transform:scale(1.12)}
+.x-bild-rahmen > :is(img,video){position:relative}
+.x-bild-rahmen :is(img,video){display:block;width:100%;height:100%;object-fit:cover}
+.x-bild-rahmen figcaption{font-size:var(--ac-t-klein);line-height:1.3}
+.x-bild-unter{font-size:var(--ac-t-klein);line-height:1.35;color:var(--ac-leise);max-width:40ch}
+.x-clip-knopf{position:absolute;right:var(--ac-a-3);bottom:var(--ac-a-3);display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:var(--ac-radius-rund);
+  background:var(--ac-glas);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--ac-text);cursor:pointer;transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-clip-knopf:hover{background:var(--ac-zart-gruen)}
+.x-clip-knopf:active{background:var(--ac-gruen)}
+
+/* 05.1 mit Fotos: das Hauptfoto ragt von unten in „felya labs“, der Clip bleibt links stehen, darunter ein versetzter Streifen */
+.x-exo-mitfoto .x-exo-raster{margin-top:var(--ac-a-6)}
+.x-exo-hinten{min-width:0}
+.x-exo-foto{position:relative;z-index:2;margin-top:calc(-1 * clamp(24px,4vw,64px));margin-bottom:var(--ac-a-6)}
+.x-exo-foto .ac-foto{border-radius:var(--ac-radius-l);box-shadow:var(--ac-schatten-2)}
+.x-exo-clip{position:sticky;top:96px;margin-top:var(--ac-a-7)}
+.x-exo-schritte .x-exo-schritt-foto{margin-top:var(--ac-a-4);max-width:380px}
+.x-streifen{display:flex;align-items:flex-start;gap:var(--ac-rinne);margin-top:var(--ac-a-8)}
+.x-streifen > .x-bild{flex:var(--r) 1 0}
+.x-streifen > .x-bild:nth-child(even){margin-top:var(--ac-a-7)}
+
+/* Projektblöcke (immobot, inventar per foto, virtubooth, ion like fish): eine Linie, Form nach Material.
+   Kopfzeile, riesiger Titel, das Bild ragt in seine untere Kante, darunter Satz, Abschnitte, Tags. */
+.x-labor{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto auto 1fr;column-gap:var(--ac-rinne);align-items:start}
+.x-labor > .x-p-kopf{grid-column:1/-1}
+.x-labor-titel{grid-column:1/-1;grid-row:2;position:relative;z-index:1;margin-top:var(--ac-a-5) !important;font-family:var(--ac-font-display);font-weight:900;
+  font-size:clamp(72px,13vw,230px);line-height:.8;padding-bottom:.06em;overflow-wrap:anywhere}
+.x-labor-medien{grid-row:2/span 2;position:relative;z-index:2;margin-top:calc(var(--ac-a-5) + clamp(48px,6vw,110px))}
+.x-labor-text{grid-row:3;margin-top:var(--ac-a-6)}
+.x-labor-hoch .x-labor-medien{grid-column:8/span 5}
+.x-labor-hoch .x-labor-text{grid-column:1/span 6}
+.x-labor-screens .x-labor-medien{grid-column:6/span 7}
+.x-labor-screens .x-labor-text{grid-column:1/span 5}
+.x-labor-rechts .x-labor-medien{grid-column:7/span 6}
+.x-labor-rechts .x-labor-text{grid-column:1/span 6}
+.x-labor-links .x-labor-titel{text-align:right}
+.x-labor-links .x-labor-medien{grid-column:1/span 6}
+.x-labor-links .x-labor-text{grid-column:7/span 6}
+.x-labor-satz{margin:0 0 var(--ac-a-2);font-size:clamp(22px,1.7vw,28px);line-height:1.3;max-width:32ch;text-wrap:pretty}
+.x-labor-rolle{margin:0 0 var(--ac-a-5);color:var(--ac-leise);font-size:var(--ac-t-klein)}
+.x-labor-satz + .x-teile{margin-top:var(--ac-a-5)}
+.x-labor-haupt{rotate:var(--dreh,0deg)}
+.x-labor-haupt .ac-foto{box-shadow:var(--ac-schatten-2)}
+/* Schild oben, unten liegen die kleinen Fotos drüber */
+.x-labor-haupt figcaption{top:var(--ac-a-3);bottom:auto}
+/* Render: freigestelltes Objekt ohne Rahmen, so groß wie die Spalte, nie höher als der Bildschirm */
+.x-labor-render{display:block;width:100%;height:auto;max-height:min(80vh,780px);object-fit:contain;pointer-events:none;filter:drop-shadow(0 30px 40px rgb(var(--ac-schatten-rgb) / .16))}
+.x-labor-rechts .x-labor-medien{margin-top:calc(var(--ac-a-5) + clamp(20px,3vw,56px))}
+.x-labor-links .x-labor-medien{margin-top:calc(var(--ac-a-5) + clamp(70px,9vw,160px))}
+.x-labor-klein{display:flex;align-items:flex-start;gap:var(--ac-a-4);margin-top:var(--ac-a-5)}
+.x-labor-klein > .x-bild{flex:var(--r) 1 0}
+/* Hochformat: die kleinen liegen versetzt und leicht gedreht, wie hingelegt */
+.x-labor-hoch .x-labor-klein{margin-top:calc(-1 * var(--ac-a-7));padding-inline:var(--ac-a-3)}
+.x-labor-hoch .x-labor-klein > .x-bild:nth-child(odd){rotate:-3deg}
+.x-labor-hoch .x-labor-klein > .x-bild:nth-child(even){rotate:2.5deg;margin-top:var(--ac-a-6)}
+.x-labor-hoch .x-labor-klein .ac-foto{box-shadow:var(--ac-schatten-2)}
+/* Screenshots: die übrigen als breite Reihe über die ganze Seite, versetzt, mit Unterschrift; darunter die Abschnitte in einer Zeile */
+.x-screens{grid-column:1/-1;grid-row:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ac-a-6) var(--ac-rinne);margin-top:var(--ac-a-8);align-items:start}
+.x-screens > .x-bild:nth-child(2){margin-top:var(--ac-a-7)}
+.x-screens > .x-bild:nth-child(3){margin-top:var(--ac-a-4)}
+.x-screens .ac-foto{border-radius:var(--ac-radius-m);box-shadow:var(--ac-schatten-2)}
+.x-screens .x-bild-unter{color:var(--ac-text)}
+.x-screens-text{grid-column:1/-1;grid-row:5;margin-top:var(--ac-a-7)}
+/* Abschnitte: Titel als Überschrift, Linie darüber */
+.x-teile{margin:0}
+.x-teile > div{padding:var(--ac-a-4) 0;border-top:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-teile dt{margin-bottom:var(--ac-a-1);font-family:var(--ac-font-display);font-weight:800;font-size:clamp(24px,2vw,32px);line-height:.95}
+.x-teile dd{margin:0;max-width:var(--x-mass)}
+.x-teile-raster{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));column-gap:var(--ac-rinne)}
+/* Tags und Links */
+.x-p-fuss{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ac-a-3) var(--ac-a-5);margin-top:var(--ac-a-5)}
+.x-p-links{display:flex;flex-wrap:wrap;gap:4px 20px;list-style:none;margin:0;padding:0;font-size:var(--ac-t-klein)}
+.x-p-links a{display:inline-flex;align-items:center;min-height:40px;color:var(--ac-text);text-decoration:underline;text-decoration-color:var(--ac-linie);text-underline-offset:.22em;
+  transition:text-decoration-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-p-links a:hover{text-decoration-color:var(--ac-text)}
+
+/* 05.2 laufender Auftrag: helle Fläche, Tablet ragt aus ihr heraus, Kernkompetenzen groß, Ablauf als Pipeline */
+.x-auftrag-feld{margin-inline:var(--ac-a-3);padding:var(--ac-a-6) 0 var(--ac-a-8);border-radius:var(--ac-radius-l);background:var(--ac-flaeche)}
+.x-auftrag .x-p-kopf{border-top:0;padding-top:0}
+.x-auftrag-buehne{position:relative;margin-top:var(--ac-a-5);min-height:clamp(380px,36vw,560px)}
+.x-auftrag-titel{position:relative;z-index:1;max-width:9ch;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(60px,10vw,184px);line-height:.82;padding-bottom:.04em;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
+.x-auftrag-bild{position:absolute;z-index:2;right:-2%;top:-22%;width:min(44vw,640px);pointer-events:none;filter:drop-shadow(0 34px 44px rgb(var(--ac-schatten-rgb) / .2))}
+img.x-auftrag-bild{height:auto}
+.x-auftrag-satz{position:relative;z-index:1;margin:var(--ac-a-6) 0 0;font-size:clamp(22px,1.7vw,28px);line-height:1.3;max-width:30ch;text-wrap:pretty}
+.x-kern-h{margin-bottom:var(--ac-a-4) !important;font-family:var(--ac-font-display);font-weight:800;font-size:24px;line-height:1}
+.x-kern{margin-top:var(--ac-a-8)}
+.x-kern-liste{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ac-a-4) var(--ac-rinne);list-style:none;margin:0;padding:0}
+.x-kern-liste li{padding-top:var(--ac-a-3);border-top:2px solid var(--ac-text);
+  font-family:var(--ac-font-display);font-weight:900;font-size:clamp(28px,2.6vw,46px);line-height:.9;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
+.x-kern-text{margin:var(--ac-a-5) 0 0;max-width:var(--x-mass);font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
+.x-ablauf-block{margin-top:var(--ac-a-8)}
+.x-ablauf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ac-a-5) var(--ac-rinne);list-style:none;margin:0;padding:0}
+.x-ablauf li{position:relative;display:flex;flex-direction:column;gap:6px;padding-top:40px}
+/* die Leitung läuft durch alle drei Schritte, ein Pfeil zeigt die Richtung */
+.x-ablauf li::before{content:"";position:absolute;left:0;right:calc(-1 * var(--ac-rinne));top:11px;height:2px;background:var(--ac-text)}
+.x-ablauf li:last-child::before{right:0}
+.x-ablauf li:not(:last-child)::after{content:"";position:absolute;right:calc(-1 * var(--ac-rinne) / 2 + 2px);top:6px;width:10px;height:10px;border-top:2px solid var(--ac-text);border-right:2px solid var(--ac-text);transform:rotate(45deg)}
+.x-ablauf-punkt{position:absolute;left:0;top:2px;width:20px;height:20px;border-radius:50%;background:var(--ac-flaeche);border:2px solid var(--ac-text)}
+.x-ablauf-ki .x-ablauf-punkt{background:var(--ac-orange);border-color:var(--ac-orange)}
+.x-ablauf b{font-family:var(--ac-font-display);font-weight:800;font-size:clamp(26px,2.2vw,36px);line-height:.95}
+.x-ablauf span:not(.x-ablauf-punkt){max-width:30ch;line-height:1.45}
+
+/* 05.7 weitere: Kurzmeldungen. Der LED-Kasten bekommt sein Render groß, die 48 steht als Stempel dahinter. */
+.x-weitere-liste{list-style:none;margin:var(--ac-a-5) 0 0;padding:0}
+.x-meldung{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:var(--ac-a-5) var(--ac-rinne);align-items:start;padding:var(--ac-a-6) 0;border-bottom:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-meldung:last-child{border-bottom:0}
+.x-meldung-bild{position:relative;max-width:300px}
+.x-meldung-bild > img{display:block;width:100%;height:auto}
+.x-meldung-meta{display:flex;flex-wrap:wrap;gap:2px 16px;margin:0;color:var(--ac-leise)}
+.x-meldung h4{margin:var(--ac-a-2) 0 var(--ac-a-3) !important;font-family:var(--ac-font-display);font-weight:800;font-size:var(--ac-t-h3);line-height:.95}
+.x-meldung-text p{margin:0 0 var(--ac-a-3);max-width:var(--x-mass)}
+.x-meldung-text .x-meldung-satz{font-size:var(--ac-t-lead);line-height:1.35}
+.x-meldung-text h5{font-family:var(--ac-font-display);font-weight:800;font-size:22px;line-height:1;margin:var(--ac-a-4) 0 var(--ac-a-1)}
+.x-meldung-text .x-p-fuss{margin-top:0}
+.x-meldung-zahl .x-meldung-bild{max-width:440px;padding:clamp(28px,3vw,48px) 0 0 clamp(36px,5vw,80px)}
+.x-meldung-zahl .x-meldung-bild > img{position:relative;z-index:1}
+.x-zahl{position:absolute;left:0;top:0;z-index:0;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(96px,9vw,150px);line-height:.8;letter-spacing:-.02em;color:var(--ac-text)}
+.x-zahl small{font-family:var(--ac-font-serif);font-style:italic;font-weight:400;font-size:.32em;letter-spacing:0}
+/* ohne Foto und Render: die Tags als ruhiges Wortbild */
+.x-wortbild{display:flex;flex-direction:column;gap:4px;padding:var(--ac-a-4) var(--ac-a-5);border-radius:var(--ac-radius-m);background:var(--ac-flaeche);
+  font-family:var(--ac-font-display);font-weight:800;font-size:clamp(24px,2vw,32px);line-height:1;color:var(--ac-leise)}
+.x-wortbild span:first-child{color:var(--ac-text)}
+
+/* ================= 06 building stuff | Kompetenzen ================= */
+.x-cv-h{margin-bottom:var(--ac-a-5) !important;font-family:var(--ac-font-display);font-weight:800;font-size:var(--ac-t-h3);line-height:.95}
+.x-cv-h-komp{margin-top:var(--ac-a-8) !important}
+/* Zeitleiste: links die Stationen, rechts die Spur mit Jahreslinien; Balken wachsen einmal beim Hereinkommen */
+.x-cv{--zl-text:32%}
+.x-zl{position:relative;margin:0;padding:34px 0 26px}
+.x-zl-linien{position:absolute;top:0;bottom:0;left:calc(var(--zl-text) + var(--ac-rinne));right:0;pointer-events:none}
+.x-zl-linien span{position:absolute;top:0;bottom:26px;border-left:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-zl-linien b{position:absolute;top:0;left:6px;color:var(--ac-leise);font-weight:500}
+.x-zl-linien .x-zl-heute{top:30px;bottom:0;border-left:2px solid var(--ac-orange)}
+.x-zl-heute b{top:auto;bottom:0;left:auto;right:6px;color:var(--ac-orange-tinte)}
+.x-zl-zeilen{list-style:none;margin:0;padding:0}
+.x-zl-zeile{display:grid;grid-template-columns:var(--zl-text) minmax(0,1fr);column-gap:var(--ac-rinne);align-items:end;padding:var(--ac-a-4) 0;border-bottom:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-zl-zeile:first-child{border-top:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-zl-zeit{color:var(--ac-leise)}
+/* der Text deckt die Jahreslinien ab (schmal laufen sie sonst durch die Zeilen) */
+.x-zl-text{position:relative;z-index:1;background:var(--ac-grund)}
+.x-zl-text h4{margin:var(--ac-a-1) 0 var(--ac-a-1) !important;font-family:var(--ac-font-display);font-weight:800;font-size:clamp(28px,2.4vw,40px);line-height:.95}
+.x-zl-text p{margin:0;font-size:var(--ac-t-klein);line-height:1.4;color:var(--ac-leise);max-width:44ch}
+.x-zl-spur{position:relative;height:104px}
+.x-zl-zeile.ohne-bilder .x-zl-spur{height:40px}
+.x-zl-balken{position:absolute;bottom:8px;height:14px;border-radius:var(--ac-radius-rund);background:var(--ac-text);transform-origin:0 50%}
+.x-zl-zeile.neu .x-zl-balken{background:var(--ac-orange)}
+.x-zl-zeile.offen .x-zl-balken{background:none;border:2px dashed var(--ac-text)}
+.x-bewegt .x-zl.x-rein:not(.da) .x-zl-balken{transform:scaleX(0)}
+.x-bewegt .x-zl.da .x-zl-balken{transition:transform 1000ms var(--ac-ease-ruhig) calc(250ms + var(--k,0) * 140ms)}
+/* Projekte als kleine Bilder auf dem Balken: Links zum Projekt */
+.x-zl-bild{position:absolute;bottom:18px;left:clamp(0px,calc(var(--x) * 1% - 36px),calc(100% - 72px - var(--rest,0) * 62px));z-index:1;display:grid;place-items:center;width:72px;height:72px;
+  border-radius:var(--ac-radius-m);background:var(--ac-flaeche);box-shadow:var(--ac-schatten-1);overflow:hidden;rotate:calc((var(--n,0) - 1.2) * 4deg);
+  transition:transform var(--ac-dauer-kurz) var(--ac-ease-ruhig),box-shadow var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-zl-bild img{display:block}
+.x-zl-bild .x-zl-render{width:86%;height:86%;object-fit:contain}
+.x-zl-bild .x-zl-foto{width:100%;height:100%;object-fit:cover}
+.x-zl-bild:hover{transform:translate3d(0,-4px,0);box-shadow:var(--ac-schatten-2);z-index:2}
+.x-zl-bild:focus-visible{z-index:2}
+/* Stationen ohne Jahr: außerhalb der Achse, die Projekte als Reihe im Fluss, nicht nach Jahren verteilt */
+.x-zl-viele{display:grid;grid-template-columns:var(--zl-text) minmax(0,1fr);column-gap:var(--ac-rinne);align-items:center;padding:var(--ac-a-4) 0;border-bottom:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-zl-reihe{display:flex;flex-wrap:wrap;gap:12px;list-style:none;margin:0;padding:6px 0}
+.x-zl-reihe .x-zl-bild{position:relative;left:auto;bottom:auto;rotate:calc((var(--n,0) % 3 - 1) * 3deg)}
+.x-cv-komp{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:var(--ac-rinne)}
+.x-cv-komp > div{padding:var(--ac-a-4) 0;border-top:2px solid var(--ac-text)}
+.x-cv-komp h4{margin-bottom:var(--ac-a-3) !important;font-family:var(--ac-font-display);font-weight:800;font-size:clamp(26px,2vw,32px);line-height:1}
+.x-cv-komp ul{list-style:none;margin:0;padding:0}
+.x-cv-komp li{padding:6px 0;border-top:var(--ac-linie-breite) solid var(--ac-linie);font-size:16px;line-height:1.35}
+
+/* ================= 07 Kontakt: Navy statt Schwarz ================= */
+/* eigene Tokens für den Navy-Abschnitt (Navy = --ac-tiefe aus „Feld“), Schrift aus „Nacht“ */
+#v-experiment{--x-navy:#14304A;--x-navy-flaeche:#1B3B59;--x-navy-vertieft:#23435F;--x-navy-linie:#33536F;--x-navy-leise:#A9B8C8;--x-navy-ph:#5A3424}
+#v-experiment .x-kontakt{--ac-grund:var(--x-navy);--ac-flaeche:var(--x-navy-flaeche);--ac-vertieft:var(--x-navy-vertieft);--ac-linie:var(--x-navy-linie);--ac-leise:var(--x-navy-leise);--ac-zart-orange:var(--x-navy-ph);
+  margin-top:var(--ac-sektion);padding-bottom:var(--ac-a-8);background:var(--ac-grund);color:var(--ac-text);border-radius:var(--ac-radius-l) var(--ac-radius-l) 0 0}
+.x-kontakt-gross{display:inline-block;margin:var(--ac-a-3) 0 var(--ac-a-6);white-space:nowrap;font-family:var(--ac-font-display);font-weight:900;font-size:100px;line-height:.8}
+.x-kontakt-zeile{display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px;padding-top:var(--ac-a-4);border-top:var(--ac-linie-breite) solid var(--ac-linie)}
+/* Adresse als markierbarer Text, daneben der Knopf, der das Mailprogramm öffnet */
+.x-kontakt-mail{margin:0;font-family:var(--ac-font-display);font-weight:800;font-size:clamp(34px,4vw,64px);line-height:1;color:var(--ac-text);user-select:text;-webkit-user-select:text;-webkit-user-drag:none;overflow-wrap:anywhere;
+  text-decoration:underline;text-decoration-thickness:2px;text-decoration-color:var(--ac-linie);text-underline-offset:.14em;transition:text-decoration-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+a.x-kontakt-mail:hover{text-decoration-color:var(--ac-gruen)}
+.x-kontakt-mail::selection{background:var(--ac-gruen);color:var(--ac-auf-gruen)}
+.x-kontakt-link{display:inline-flex;align-items:center;min-height:44px;color:var(--ac-text);font-size:18px;text-decoration:underline;text-decoration-color:var(--ac-linie);text-underline-offset:.22em;
+  transition:text-decoration-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-kontakt-link:hover{text-decoration-color:currentColor}
+.x-kontakt-info{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 32px;margin-top:var(--ac-a-4)}
+.x-kontakt-info p{margin:0}
+.x-kontakt-ort{color:var(--ac-leise)}
+.x-fuss{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin-top:var(--ac-a-9);padding-top:var(--ac-a-4);border-top:var(--ac-linie-breite) solid var(--ac-linie);font-size:var(--ac-t-klein);color:var(--ac-leise)}
+.x-fuss-marke{font-size:20px;color:var(--ac-text);margin-right:auto}
+.x-fuss-link{display:inline-flex;align-items:center;min-height:40px;padding:0 2px;border:0;background:none;color:var(--ac-leise);font:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:var(--ac-linie);text-underline-offset:.22em;
+  transition:color var(--ac-dauer-kurz) var(--ac-ease-ruhig),text-decoration-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-fuss-link:hover{color:var(--ac-text);text-decoration-color:currentColor}
+
+/* ================= schmal ================= */
+@media (max-width:899px){
+  .x-titel-name{bottom:30%}
+  .x-titel-zeichen{right:8%;bottom:calc(30% + 9vw);width:min(46vw,34vh)}
+  .x-titel-pfeil{bottom:120px}
+  .x-bewegt .x-these-bahn{height:160vh}
+  .x-these-platine{top:calc(-1 * clamp(120px,24vw,220px));width:min(62vw,560px)}
+  .x-stufe{grid-column:1/8}
+  .x-stufe:nth-child(2){grid-column:5/13;grid-row:auto;margin-top:0}
+  /* schmal: Leiste, Schlagzeile, Unterzeile, dann das Foto rechts, darunter der Text. Nichts liegt über Text. */
+  .x-zeitung-titel{grid-column:1/-1}
+  .x-zeitung-foto{grid-column:5/13;grid-row:3;margin:var(--ac-a-6) var(--ac-a-2) 0 0;max-height:none}
+  .x-zeitung-unter{grid-column:1/-1;grid-row:2}
+  .x-zeitung-spalten{grid-column:1/-1;grid-row:4}
+  .x-angebot-raster{grid-template-columns:minmax(0,1fr)}
+  .x-angebot-spalte{grid-row:auto}
+  .x-angebot-cta{grid-column:1}
+  .x-angebot-spalte{position:relative;top:auto;height:auto;aspect-ratio:1.15;max-height:56vh;margin-inline:auto;width:100%}
+  .x-p-index ol{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .x-exo-bild{top:38%;width:70vw}
+  .x-exo-raster{grid-template-columns:minmax(0,1fr)}
+  .x-auftrag-buehne{min-height:0}
+  .x-auftrag-bild{position:relative;right:auto;top:auto;display:block;width:min(74vw,440px);margin:-4vw -2vw 0 auto}
+  .x-auftrag-satz{margin-top:var(--ac-a-4)}
+  .x-kern-liste{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .x-ablauf{grid-template-columns:minmax(0,1fr);gap:0}
+  .x-ablauf li{padding:0 0 var(--ac-a-5) 40px}
+  .x-ablauf li::before{left:9px;right:auto;top:20px;bottom:0;width:2px;height:auto}
+  .x-ablauf li:last-child::before{display:none}
+  .x-ablauf li:not(:last-child)::after{display:none}
+  .x-meldung{grid-template-columns:minmax(0,1fr)}
+  .x-labor-render{width:min(100%,460px);max-height:62vh;margin-inline:auto}
+  .x-labor-links .x-labor-titel{text-align:left}
+  .x-screens{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:var(--ac-a-6)}
+  .x-screens > .x-bild:nth-child(n){margin-top:0}
+  .x-cv{--zl-text:0px}
+  .x-zl-viele{grid-template-columns:minmax(0,1fr);row-gap:var(--ac-a-3)}
+  .x-zl-linien{left:0}
+  .x-zl-zeile{grid-template-columns:minmax(0,1fr);row-gap:var(--ac-a-2)}
+  .x-zl-spur{height:92px}
+  .x-cv-komp{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* schmal: erst Satz und Tags, dann Hauptfoto und Abschnitte, der Clip danach */
+  .x-exo-mitfoto .x-exo-raster{row-gap:0}
+  .x-exo-mitfoto .x-exo-vorn{display:contents}
+  .x-exo-mitfoto .x-exo-hinten{order:1}
+  .x-exo-clip{position:relative;top:auto;order:2;margin-top:var(--ac-a-6)}
+  .x-exo-foto{margin-top:var(--ac-a-6)}
+  .x-labor > *{grid-column:1/-1 !important;grid-row:auto !important}
+  /* riesige Titel über zwei Zeilen: Unterlänge von „p“ stößt sonst in die nächste Zeile */
+  .x-labor-titel{line-height:.92}
+  .x-labor-medien{margin-top:calc(-1 * clamp(8px,2vw,20px))}
+  .x-labor-hoch .x-labor-haupt{width:min(78%,420px);margin-left:auto}
+  .x-labor-rechts .x-labor-medien,.x-labor-links .x-labor-medien{margin-top:calc(-1 * clamp(8px,2vw,20px))}
+}
+@media (max-width:560px){
+  .x-kapsel{top:10px;left:10px}
+  .x-band{height:72px}
+  .x-kapsel-knopf{height:46px;padding:0 16px 2px 12px;gap:8px}
+  .x-kapsel-titel{font-size:19px}
+  .x-these-laut{font-size:clamp(46px,13vw,64px)}
+  .x-these-leise{font-size:clamp(40px,11.5vw,56px)}
+  .x-these-platine{top:-140px;right:-8vw;width:80vw}
+  .x-these-text{padding-top:calc(34vw + 40px)}
+  #v-experiment:not(.x-bewegt) .x-these-pin{padding-bottom:170px}
+  .x-these-folge{row-gap:var(--ac-a-7)}
+  .x-stufe{grid-column:1/-1}
+  .x-stufe:nth-child(2){grid-column:3/-1}
+  .x-stufe-wort{font-size:clamp(56px,16vw,72px)}
+  .x-these-schluss{margin-top:var(--ac-a-7)}
+  .x-zeitung-foto{grid-column:3/13}
+  .x-leistung{grid-template-columns:minmax(0,1fr);padding:var(--ac-a-5) 0 var(--ac-a-6)}
+  .x-leistung p{padding-left:15%}
+  .x-leistung-haupt p{padding-left:0;width:auto;margin-left:15%}
+  .x-angebot-cta{margin-top:var(--ac-a-5)}
+  .x-p-index ol{grid-template-columns:minmax(0,1fr)}
+  .x-p-index a{flex-direction:row;align-items:baseline;gap:12px}
+  .x-exo-titel > span:last-child{margin-left:0}
+  .x-exo-titel > .x-exo-kursiv{margin-left:14vw}
+  .x-auftrag-feld{margin-inline:6px}
+  .x-auftrag-titel{line-height:.9}
+  .x-kern-liste li{font-size:clamp(26px,8vw,34px)}
+  .x-screens{grid-template-columns:minmax(0,1fr)}
+  .x-meldung-bild{max-width:240px}
+  .x-meldung-zahl .x-meldung-bild{max-width:320px}
+  .x-zl-bild{width:56px;height:56px;left:clamp(0px,calc(var(--x) * 1% - 28px),calc(100% - 56px - var(--rest,0) * 46px))}
+  .x-zl-spur{height:80px}
+  .x-cv-komp li{font-size:15px}
+  /* Streifen bricht um: Reihen nach Seitenverhältnis (Grundbreite = Verhältnis × 140 px) */
+  .x-streifen{flex-wrap:wrap;gap:var(--ac-a-4) var(--ac-a-3);margin-top:var(--ac-a-6)}
+  .x-streifen > .x-bild{flex:var(--r) 1 calc(var(--r) * 140px)}
+  .x-streifen > .x-bild:nth-child(even){margin-top:0}
+  .x-labor-klein{gap:var(--ac-a-3)}
+  .x-fuss-marke{flex-basis:100%}
+}
+@media (pointer:coarse){
+  .x-menue button{min-height:44px}
+}
+@media (prefers-reduced-motion:reduce){
+  .x-kapsel-wechsel{animation:none}
+}
