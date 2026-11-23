@@ -1,0 +1,134 @@
+/* ================= 05 Projekte: das Feld ================= */
+.x-f-hinweis{margin:var(--ac-a-3) 0 0;font-family:var(--ac-font-serif);font-style:italic;font-size:var(--ac-t-lead);line-height:1.2}
+/* mit Überschrift so hoch wie ein Bildschirm: die Objekte treiben neben den Titel. Alle Größen hängen am Feld, nicht am Fenster. */
+.x-feld{position:relative;height:clamp(500px,calc(100svh - 170px),860px);max-width:1800px;margin:calc(-1 * clamp(40px,9vh,100px)) auto 0;padding:0;list-style:none;container-type:size}
+.x-f{--g:min(10cqw,15cqh);position:absolute;left:calc(var(--x) * 100%);top:calc(var(--y) * 100%);width:calc(var(--g) * var(--bf));
+  margin:calc(var(--g) * var(--hf) / -2) 0 0 calc(var(--g) * var(--bf) / -2);isolation:isolate}
+.x-f-mittel{--g:min(15cqw,22cqh)}
+.x-f-gross{--g:min(30cqw,48cqh)}
+.x-f:is(:hover,:focus-within){z-index:5}
+/* Treiben auf dem Compositor: eigene Ebene und Animation nur, solange das Feld nah am Bildschirm ist. Bewusst kein filter auf den Bildern. */
+@media (min-width:900px){
+  .x-bewegt .x-feld.laeuft .x-f-treiben{will-change:transform;animation:x-f-treiben var(--dauer) ease-in-out var(--vor) infinite}
+  .x-bewegt .x-f:is(:hover,:focus-within) .x-f-treiben,html.x-gesperrt .x-f-treiben{animation-play-state:paused !important}
+  /* Auftritt: etwas zur Mitte gerückt, treibt beim ersten Erscheinen auseinander */
+  .x-bewegt .x-feld:not(.da) .x-f{transform:translate(calc((.5 - var(--x)) * 22cqw),calc((.5 - var(--y)) * 22cqh))}
+  .x-bewegt .x-feld.kommt .x-f{transition:transform 1.6s var(--ac-ease-ruhig)}
+}
+@keyframes x-f-treiben{
+  0%,100%{transform:translate3d(0,0,0) rotate(0deg)}
+  25%{transform:translate3d(var(--ax),var(--ay),0) rotate(var(--ar))}
+  50%{transform:translate3d(var(--bx),var(--by),0) rotate(var(--br))}
+  75%{transform:translate3d(var(--cx),var(--cy),0) rotate(var(--cr))}
+}
+.x-f-knopf{position:relative;display:block;width:100%;height:calc(var(--g) * var(--hf));padding:0;border:0;border-radius:var(--ac-radius-m);background:none;color:inherit;font:inherit;cursor:pointer}
+.x-f-bild{display:block;width:100%;height:100%;rotate:var(--dreh);transition:scale var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-f-knopf:is(:hover,:focus-visible) .x-f-bild{scale:1.06}
+.x-f-render{display:block;width:100%;height:100%;object-fit:contain}
+.x-f-foto{display:block;width:100%;height:100%;object-fit:cover;border-radius:var(--ac-radius-m);box-shadow:var(--ac-schatten-1)}
+/* die wichtigen Projekte: flache grüne Platte hinter Objekt und Name */
+.x-f-gross .x-f-knopf{height:auto}
+.x-f-gross .x-f-bild{height:calc(var(--g) * var(--hf))}
+.x-f-gross .x-f-knopf::before{content:"";position:absolute;z-index:-1;inset:-14px -6% -16px;border-radius:var(--ac-radius-l);background:var(--ac-gruen)}
+.x-f-wort{display:grid;place-items:center;width:100%;height:100%;padding:8px;border-radius:var(--ac-radius-m);background:var(--ac-flaeche);box-shadow:var(--ac-schatten-1);
+  font-family:var(--ac-font-display);font-weight:800;font-size:24px;line-height:1}
+/* Name unter dem Objekt; darf nichts abfangen, darunter kann schon das nächste Objekt liegen */
+.x-f-name{position:absolute;left:50%;top:100%;display:grid;gap:2px;width:max-content;max-width:min(300px,70cqw);margin-top:8px;padding:3px 10px 4px;border-radius:var(--ac-radius-s);background:var(--ac-grund);
+  text-align:center;pointer-events:none;translate:-50% 0;opacity:0;transition:opacity var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-f-name b{font-family:var(--ac-font-display);font-weight:800;font-size:24px;line-height:1}
+.x-f-name small{font-size:var(--ac-t-klein);line-height:1.2;color:var(--ac-leise)}
+.x-f-gross .x-f-name,.x-f:is(:hover,:focus-within) .x-f-name{opacity:1}
+.x-f-gross .x-f-name{position:static;width:auto;max-width:none;margin-top:6px;padding:0;background:none;color:var(--ac-auf-gruen);translate:none;text-wrap:balance}
+.x-f-gross .x-f-name b{font-weight:900;font-size:clamp(28px,2.8cqw,44px)}
+.x-f-gross .x-f-name small{color:var(--ac-auf-gruen)}
+/* ohne Überfahren (Tablet) stehen alle Namen da */
+@media (hover:none){
+  .x-f-name{opacity:1}
+}
+
+/* schmal: keine Physik, lockeres Raster mit unterschiedlich großen, versetzten Objekten */
+@media (max-width:899px){
+  .x-feld{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-auto-flow:dense;gap:var(--ac-a-3) 8px;height:auto;margin-top:var(--ac-a-3);padding-inline:var(--ac-seitenrand);container-type:normal;align-items:start}
+  .x-f{position:relative;left:auto;top:auto;grid-column:var(--von)/var(--bis);width:auto;margin:var(--o) 0 0}
+  .x-f-knopf{height:auto;min-height:44px}
+  .x-f-bild{height:auto;aspect-ratio:var(--bild);max-height:150px}
+  .x-f-gross .x-f-bild{height:auto;margin-inline:auto;max-height:230px}
+  .x-f-render,.x-f-foto{max-height:inherit}
+  .x-f-name{position:static;width:auto;max-width:none;margin-top:4px;padding:0;background:none;translate:none;opacity:1}
+  .x-f-gross .x-f-knopf{padding:14px 12px 12px}
+  .x-f-gross .x-f-knopf::before{inset:0}
+  .x-f-name b{font-size:17px}
+  .x-f-gross .x-f-name b{font-size:30px}
+  .x-f-name small{display:none}
+  .x-f-gross .x-f-name small{display:block}
+}
+
+/* ================= 05 Projekte: das Overlay ================= */
+/* Seite gesperrt: die Breite des weggefallenen Scrollbalkens gleicht ProjektOverlay als padding-right aus */
+html.x-gesperrt{overflow:hidden}
+.x-po{padding:0;border:0;margin:auto;width:min(1180px,calc(100vw - 32px));max-width:none;height:auto;max-height:min(92vh,1100px);max-height:min(92dvh,1100px);
+  border-radius:var(--ac-radius-l);background:var(--ac-flaeche);color:var(--ac-text);box-shadow:var(--ac-schatten-2);overflow:auto;overscroll-behavior:contain;container-type:inline-size}
+.x-po:not([open]){display:none}
+.x-po::backdrop{background:rgb(14 19 16 / .55)}
+.x-bewegt .x-po[open]{animation:x-po-auf var(--ac-dauer-mittel) var(--ac-ease-ruhig)}
+@keyframes x-po-auf{from{opacity:0;transform:translate3d(0,16px,0) scale(.97)}}
+.x-po-innen{padding:0 clamp(16px,3.4cqi,44px) clamp(28px,4cqi,56px)}
+.x-po-leiste{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:6px;margin-inline:calc(-1 * clamp(16px,3.4cqi,44px));padding:10px clamp(10px,2.4cqi,32px);background:var(--ac-flaeche)}
+.x-po-stand{min-width:62px;text-align:center;color:var(--ac-leise)}
+.x-po-knopf{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:var(--ac-radius-rund);background:var(--ac-vertieft);color:var(--ac-text);font-size:20px;line-height:1;cursor:pointer;
+  transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-po-knopf:hover{background:var(--ac-zart-gruen)}
+.x-po-zu{margin-left:auto}
+.x-po-kopf{padding-top:var(--ac-a-2)}
+.x-po-meta{display:flex;flex-wrap:wrap;gap:2px 16px;margin:0 0 var(--ac-a-3);font-size:var(--ac-t-klein);line-height:1.4;color:var(--ac-leise)}
+.x-po-titel{margin:0;padding-bottom:.1em;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(48px,8.4cqi,104px);line-height:.88;overflow-wrap:break-word}
+/* bekommt den Fokus nur beim Öffnen, damit der Screenreader hier anfängt */
+#v-experiment .x-po-titel:focus-visible{outline:none}
+.x-po-satz{margin:var(--ac-a-4) 0 0;max-width:38ch;font-size:clamp(22px,2.3cqi,28px);line-height:1.3;text-wrap:pretty}
+.x-po-rolle{margin:var(--ac-a-2) 0 0;font-size:var(--ac-t-klein);color:var(--ac-leise)}
+.x-po-raster{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--ac-a-6) var(--ac-a-7);align-items:start;margin-top:var(--ac-a-6)}
+.x-po-medien{display:grid;gap:var(--ac-a-4);min-width:0}
+.x-po-render{display:block;width:min(100%,560px);height:auto;max-height:64vh;margin-inline:auto;object-fit:contain;filter:drop-shadow(0 30px 40px rgb(var(--ac-schatten-rgb) / .16))}
+.x-po-galerie{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ac-a-4) var(--ac-a-3);align-items:start}
+.x-po-text{min-width:0}
+.x-po-h{margin-bottom:var(--ac-a-1) !important;font-family:var(--ac-font-display);font-weight:800;font-size:clamp(24px,2.4cqi,30px);line-height:1}
+.x-po-teile section{padding:var(--ac-a-4) 0;border-top:var(--ac-linie-breite) solid var(--ac-linie)}
+.x-po-teile section:first-child{border-top:0;padding-top:0}
+.x-po-teile p{margin:0;max-width:var(--x-mass);text-wrap:pretty}
+.x-po-teile .x-bild{margin-top:var(--ac-a-3)}
+.x-po-ablauf{margin-bottom:var(--ac-a-5)}
+.x-po-ablauf .x-po-h{margin-bottom:var(--ac-a-3) !important}
+.x-po-fuss{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ac-a-3) var(--ac-a-5);margin-top:var(--ac-a-3)}
+.x-po-links{display:flex;flex-wrap:wrap;gap:4px 20px;list-style:none;margin:0;padding:0;font-size:var(--ac-t-klein)}
+.x-po-links a{display:inline-flex;align-items:center;min-height:44px;color:var(--ac-text);text-decoration:underline;text-decoration-color:var(--ac-linie);text-underline-offset:.22em;
+  transition:text-decoration-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-po-links a:hover{text-decoration-color:var(--ac-text)}
+
+/* Pipeline des laufenden Auftrags, senkrecht: im Overlay ist sie schmal */
+.x-ablauf{display:grid;list-style:none;margin:0;padding:0}
+.x-ablauf li{position:relative;display:flex;flex-direction:column;gap:2px;padding:0 0 var(--ac-a-4) 36px}
+.x-ablauf li::before{content:"";position:absolute;left:9px;top:20px;bottom:0;width:2px;background:var(--ac-text)}
+.x-ablauf li:last-child::before{display:none}
+.x-ablauf-punkt{position:absolute;left:0;top:2px;width:20px;height:20px;border-radius:50%;background:var(--ac-flaeche);border:2px solid var(--ac-text)}
+.x-ablauf-ki .x-ablauf-punkt{background:var(--ac-orange);border-color:var(--ac-orange)}
+.x-ablauf b{font-family:var(--ac-font-display);font-weight:800;font-size:26px;line-height:1}
+.x-ablauf span:not(.x-ablauf-punkt){max-width:30ch;line-height:1.4}
+
+/* Projektfotos und Clip: rechteckig, runde Ecken, weicher Schatten (.ac-foto), festes Seitenverhältnis */
+.x-bild{margin:0;min-width:0;display:grid;gap:8px;align-content:start}
+/* bis das Foto da ist, steht seine unscharfe Vorschau im Rahmen (Hintergrund aus experiment/vorschau.ts) */
+.x-bild-rahmen{aspect-ratio:var(--r,4/3);width:100%;background-size:cover;background-position:center}
+.x-bild-rahmen::before{content:"";position:absolute;inset:0;background:inherit;filter:blur(14px);transform:scale(1.12)}
+.x-bild-rahmen > :is(img,video){position:relative}
+.x-bild-rahmen :is(img,video){display:block;width:100%;height:100%;object-fit:cover}
+.x-bild-unter{font-size:var(--ac-t-klein);line-height:1.35;color:var(--ac-leise);max-width:40ch}
+.x-clip-knopf{position:absolute;right:var(--ac-a-3);bottom:var(--ac-a-3);display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:var(--ac-radius-rund);
+  background:var(--ac-glas);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--ac-text);cursor:pointer;transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-clip-knopf:hover{background:var(--ac-zart-gruen)}
+.x-clip-knopf:active{background:var(--ac-gruen)}
+
+@media (max-width:899px){
+  .x-po{width:calc(100vw - 12px);max-height:calc(100vh - 12px);max-height:calc(100dvh - 12px);border-radius:var(--ac-radius-m)}
+  .x-po-raster{grid-template-columns:minmax(0,1fr);margin-top:var(--ac-a-5)}
+  .x-po-render{max-height:44vh}
+}

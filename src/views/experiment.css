@@ -43,7 +43,8 @@
   -webkit-mask-image:linear-gradient(#000 48%,transparent);mask-image:linear-gradient(#000 48%,transparent);
   transition:opacity var(--ac-dauer-mittel) var(--ac-ease-ruhig),background-color var(--ac-dauer-mittel) var(--ac-ease-ruhig)}
 .x-band.an{opacity:1}
-.x-band[data-farbe="gruen"]{background-color:var(--ac-gruen)}
+/* über der These-Karte kein Band: es würde ihren Rand und ihre runden Ecken überdecken. Die Kapsel hat ihren eigenen Grund. */
+.x-band[data-farbe="keins"]{opacity:0}
 .x-band[data-farbe="navy"]{background-color:var(--x-navy)}
 .x-kapsel-knopf{position:relative;display:flex;align-items:center;gap:10px;height:50px;max-width:100%;padding:0 20px 2px 14px;border-radius:var(--ac-radius-rund);
   background:var(--ac-flaeche);color:var(--ac-text);border:var(--ac-linie-breite) solid var(--ac-rand);box-shadow:var(--ac-schatten-1);overflow:hidden;cursor:pointer;
@@ -58,7 +59,6 @@
 .x-kapsel-ges{flex:none;color:var(--ac-leise)}
 .x-kapsel-titel{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:var(--ac-font-serif);font-style:italic;font-size:21px;line-height:1.3;padding-left:2px}
 .x-kapsel-wechsel{display:inline-block;animation:x-kapsel-rein 420ms var(--ac-ease-ruhig) both}
-.x-kapsel-unter{color:var(--ac-leise)}
 @keyframes x-kapsel-rein{from{opacity:0;transform:translate3d(0,.45em,0)}}
 .x-kapsel-balken{position:absolute;left:16px;right:16px;bottom:6px;height:3px;border-radius:var(--ac-radius-rund);background:var(--ac-vertieft);overflow:hidden}
 .x-kapsel-fort{position:absolute;inset:0;background:var(--ac-gruen-tinte);transform-origin:0 50%;transform:scaleX(var(--p,0));border-radius:inherit}
@@ -91,78 +91,117 @@
 .x-titel-schatten{position:absolute;left:24%;right:24%;bottom:-9%;height:7%;border-radius:50%;background:rgb(var(--ac-schatten-rgb) / .2);filter:blur(12px)}
 .x-bewegt .x-titel-zeichen{animation:x-andocken 1500ms var(--ac-ease-feder) 700ms both}
 @keyframes x-andocken{from{opacity:0;transform:translate3d(-8vw,-70vh,0) rotate(-28deg)}30%{opacity:1}}
-.x-titel-pfeil{position:absolute;left:var(--ac-seitenrand);bottom:28px;font-size:16px;color:var(--ac-leise)}
+.x-titel-pfeil{position:absolute;left:var(--ac-seitenrand);bottom:14px;display:grid;place-items:center;width:44px;height:44px;margin-left:-14px;padding:0;border:0;background:none;font-size:16px;color:var(--ac-leise);cursor:pointer}
+.x-titel-pfeil:hover{color:var(--ac-text)}
 
 /* ================= 02 These ================= */
-.x-these{position:relative}
-/* der Körper darf nach oben in den Titel wachsen, seitlich und unten wird abgeschnitten */
-.x-bewegt .x-these{clip-path:inset(-100vh 0 0 0)}
+.x-these{position:relative;--x-karte-x:max(clamp(12px,6vw,110px),calc((100vw - var(--ac-max)) / 2));--x-karte-y:8vh;--x-karte-in:clamp(20px,3vw,56px)}
 .x-these-bahn{position:relative}
 .x-these-pin{position:relative;display:flex;align-items:center}
-.x-these-kreis{display:none}
-.x-bewegt .x-these-bahn{height:175vh}
+/* Die These liegt auf einer grünen Karte, einem Objekt auf dem Seitengrund: Rand rundherum, alle Ecken rund. */
+.x-these-karte{position:absolute;inset:var(--x-karte-y) var(--x-karte-x);background:var(--ac-gruen);border-radius:var(--ac-radius-l);box-shadow:0 18px 48px rgb(18 23 20 / .16)}
+.x-bewegt .x-these-bahn{height:125vh}
 .x-bewegt .x-these-pin{position:sticky;top:0;height:100vh;height:100svh}
-.x-bewegt .x-these-kreis{display:block;position:absolute;left:50%;top:50%;width:128vmax;height:128vmax;border-radius:50%;background:var(--ac-gruen);
-  transform:translate(-50%,-50%) scale(.03);will-change:transform}
-.x-bewegt .x-these-pin.gefuellt{background:var(--ac-gruen)}
-.x-bewegt .x-these-pin.gefuellt .x-these-kreis{visibility:hidden}
-#v-experiment:not(.x-bewegt) .x-these-pin{background:var(--ac-gruen);padding-top:var(--ac-sektion);border-radius:var(--ac-radius-l) var(--ac-radius-l) 0 0}
-.x-these-innen{position:relative;width:100%;color:var(--ac-auf-gruen)}
+/* Beim Wachsen eine eigene Ebene in Endgröße, nur transform. Steht sie, fällt die Ebene weg. */
+.x-bewegt .x-these-karte{transform:scale(.12);will-change:transform}
+.x-bewegt .x-these-pin.voll .x-these-karte{will-change:auto}
+#v-experiment:not(.x-bewegt) .x-these-pin{padding-block:calc(var(--x-karte-y) + var(--x-karte-in)) calc(var(--x-karte-y) + var(--x-karte-in) + 44px)}
+/* Rastpunkt für Touch: die Stelle, an der die Karte fertig ist und sich gleich löst */
+.x-these-halt{display:none}
+.x-bewegt .x-these-halt{display:block;position:absolute;left:0;bottom:100svh;width:1px;height:1px;pointer-events:none}
+.x-these .x-these-innen{position:relative;flex:1;min-width:0;max-width:none;margin:0;padding-inline:calc(var(--x-karte-x) + var(--x-karte-in));color:var(--ac-auf-gruen)}
+.x-these-aussage{position:relative;container-type:inline-size}
+.x-these-bruch{display:none}
+/* der schlichte Pfeil unten in der Karte, derselbe Schritt wie eine Scroll-Geste */
+.x-these-weiter{position:absolute;z-index:1;left:50%;bottom:calc(var(--x-karte-y) + 8px);transform:translateX(-50%);display:grid;place-items:center;width:48px;height:48px;padding:0;border:0;border-radius:50%;
+  background:none;color:var(--ac-auf-gruen);font-size:24px;line-height:1;cursor:pointer;transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
+.x-these-weiter:hover{background:rgb(18 23 20 / .1)}
 .x-these .ac-kopf{border-top-color:var(--ac-auf-gruen);margin-bottom:clamp(20px,2.4vw,40px)}
 /* der Titel „these“ ist hier nur Wegweiser: der Satz darunter ist das Laute */
 .x-these .ac-kopf-titel{font-size:clamp(34px,2.6vw + 18px,64px)}
 .x-these .ac-kopf-nr,.x-these .ac-kopf-nr b{color:var(--ac-auf-gruen)}
-.x-these-satz{margin:0;max-width:1240px}
-.x-these-laut{display:block;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(58px,8.6vw,156px);line-height:.88}
-.x-these-leise{display:block;margin-top:.14em;font-family:var(--ac-font-serif);font-style:italic;font-size:clamp(50px,7.2vw,128px);line-height:1.04}
+/* Satz links, Platine rechts: Die Größen sind so gemessen, dass „ki ist in der software“ und die kursive Zeile gerade neben die Platine passen. */
+.x-these-satz{margin:0;max-width:61cqi}
+.x-these-laut{display:block;font-family:var(--ac-font-display);font-weight:900;font-size:7.4cqi;line-height:.88}
+.x-these-leise{display:block;margin-top:.14em;font-family:var(--ac-font-serif);font-style:italic;font-size:6.55cqi;line-height:1.04}
 .x-w{position:relative;z-index:0;display:inline-block;transition:color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
 .x-w::before{content:"";position:absolute;z-index:-1;left:-.05em;right:-.22em;top:.04em;bottom:-.02em;background:var(--ac-orange);border-radius:min(10px,.1em);
   transform:scaleX(var(--w,0));transform-origin:0 50%;will-change:transform}
 .x-these-leise .x-w::before{top:.16em;bottom:.06em}
+/* das letzte markierte Wort endet am Wort: der Wortabstand zum Rest des Satzes bleibt frei */
+.x-w:last-of-type::before{right:-.05em}
 .x-w.voll{color:var(--ac-auf-orange-gross)}
-.x-these-text{position:relative;background:var(--ac-gruen);color:var(--ac-auf-gruen);padding:var(--ac-a-8) 0 var(--ac-sektion);border-radius:0 0 var(--ac-radius-l) var(--ac-radius-l)}
+/* die Aufschlüsselung liegt ohne Fläche auf dem Grund, erst nach freiem Abstand zur Karte */
+.x-these-text{position:relative;padding:30vh 0 var(--ac-sektion)}
 .x-these-unten{position:relative}
-/* Platine: ragt aus dem Text nach oben in die leere Unterkante der Bühne, rechts unter dem Satz. Festes Seitenverhältnis. */
-.x-these-platine{position:absolute;z-index:2;right:calc(var(--ac-seitenrand) - 3vw);top:calc(-1 * clamp(150px,17vw,300px));width:min(44vw,700px);
-  pointer-events:none;transform:rotate(-6deg);will-change:transform}
+/* Platine: in der Lücke rechts neben dem Satz. Festes Seitenverhältnis. */
+.x-these-platine{position:absolute;z-index:2;right:-1cqi;top:50%;width:39cqi;margin-top:-10.6cqi;pointer-events:none;transform:rotate(-4deg);will-change:transform}
 .x-these-platine-bild{display:block;width:100%;height:auto;aspect-ratio:1600/874}
-#v-experiment:not(.x-bewegt) .x-these-pin{padding-bottom:clamp(140px,16vw,280px)}
 
-/* früher → heute: zwei versetzte Stufen, beide gleich groß, heute rückt unter die Platine. Danach der Schlussabsatz als ruhiger Satz. */
-.x-these-folge{container-type:inline-size;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--ac-rinne);row-gap:clamp(40px,4.4vw,72px);align-items:start}
-.x-stufe{grid-column:1/5;grid-row:1;margin:0;padding-top:var(--ac-a-3);border-top:var(--ac-linie-breite) solid rgb(18 23 20 / .38);
-  font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
-.x-stufe:nth-child(2){grid-column:5/10;margin-top:clamp(150px,15cqi,230px)}
-.x-stufe:nth-child(n+3){grid-column:7/13;grid-row:auto}
-.x-stufe-wort{display:block;margin:0 0 var(--ac-a-4);font-family:var(--ac-font-display);font-weight:900;line-height:.8;letter-spacing:-.005em;
-  font-size:clamp(60px,6.4cqi,96px)}
-.x-stufe-rest{display:block;max-width:31ch}
-/* Schluss: ein Satz in Vorspann-Größe über die linke Hälfte, darunter die Namenserklärung in Fließtext */
-.x-these-schluss{margin:var(--ac-a-8) 0 0;max-width:34ch;padding-top:var(--ac-a-3);border-top:var(--ac-linie-breite) solid rgb(18 23 20 / .38);
-  font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
-.x-these-name{margin:var(--ac-a-5) 0 0;max-width:var(--x-mass);font-size:var(--ac-t-text);line-height:var(--ac-zeile-text);text-wrap:pretty}
+/* Die Aufschlüsselung, alles mittig: zwei Aussagen, ein Graph, das Fazit */
+.x-vergleich{display:flex;flex-direction:column;align-items:center;gap:clamp(40px,5vw,72px);text-align:center}
+.x-gegen{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:clamp(20px,3vw,48px);width:min(100%,1040px)}
+.x-gegen p{margin:0;font-size:clamp(20px,1.9vw,28px);line-height:1.15;text-wrap:balance}
+.x-gegen em{display:block;font-family:var(--ac-font-serif);font-style:italic;font-size:3em;line-height:1}
+/* der Pfeil zwischen den Aussagen, derselbe orange Punkt wie im Logo */
+.x-gegen-pfeil{display:grid;place-items:center;width:clamp(44px,4vw,58px);aspect-ratio:1;border-radius:50%;background:var(--ac-orange);color:var(--ac-auf-orange-gross)}
+.x-gegen-pfeil svg{width:56%}
+/* Der Graph: Säulen sind Ideen, die Schwellen die Einstiegskosten. Rechts bleibt Platz für die Beschriftung der Schwellen. */
+.x-kosten{container-type:inline-size;width:min(100%,1040px)}
+.x-kosten-feld{position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));column-gap:clamp(8px,1.6cqi,20px);height:clamp(260px,34cqi,360px);padding-right:clamp(120px,19cqi,190px);margin-bottom:68px;
+  border-bottom:2px solid var(--ac-text)}
+.x-idee{position:relative;display:flex;align-items:flex-end;justify-content:center;min-width:0}
+.x-idee-saeule{display:block;width:min(72%,60px);height:calc(var(--h) * 1%);border-radius:4px 4px 0 0;background:var(--ac-text)}
+.x-idee.neu .x-idee-saeule{background:var(--ac-gruen);box-shadow:inset 0 0 0 2px var(--ac-text)}
+.x-idee-name{position:absolute;top:calc(100% + 8px);left:-4px;right:-4px;font-size:var(--ac-t-klein);line-height:1.15}
+.x-schwelle{position:absolute;left:0;right:0;bottom:calc(var(--h) * 1%);border-top:2px dashed var(--ac-text)}
+.x-schwelle.jetzt{border-top:3px solid var(--ac-orange)}
+.x-schwelle b{position:absolute;right:0;bottom:6px;width:clamp(112px,18cqi,180px);font-family:var(--ac-font-label);font-size:var(--ac-t-label);font-weight:400;line-height:1.25;text-align:right}
+.x-schwelle-fall{position:absolute;right:clamp(50px,9cqi,96px);bottom:calc((var(--bis) + 15) * 1%);height:calc((var(--von) - var(--bis) - 17) * 1%);border-left:2px solid var(--ac-orange)}
+.x-schwelle-fall::after{content:"";position:absolute;left:-7px;bottom:-8px;border:6px solid transparent;border-bottom:0;border-top:8px solid var(--ac-orange)}
+.x-kosten-text{margin:0;font-size:var(--ac-t-klein);line-height:1.3;color:var(--ac-leise)}
+/* schmal: waagerechte Balken, die Schwellen stehen senkrecht */
+@container (max-width:640px){
+  .x-kosten-feld{display:flex;flex-direction:column;gap:12px;height:auto;padding:58px 0 0;margin-bottom:12px;border-bottom:0;border-left:2px solid var(--ac-text);text-align:left}
+  .x-idee{flex-direction:column;align-items:flex-start;gap:3px}
+  .x-idee-saeule{width:calc(var(--h) * 1%);height:14px;border-radius:0 4px 4px 0}
+  .x-idee-name{position:relative;z-index:1;order:-1;top:auto;left:auto;right:auto;width:fit-content;padding:0 4px 0 2px;background:var(--ac-grund);font-size:13px}
+  .x-schwelle{left:calc(var(--h) * 1%);right:auto;top:38px;bottom:0;border-top:0;border-left:2px dashed var(--ac-text)}
+  .x-schwelle b{right:6px;bottom:auto;top:-36px;width:max-content}
+  .x-schwelle.jetzt{top:20px;border-top:0;border-left:3px solid var(--ac-orange)}
+  .x-schwelle.jetzt b{right:auto;left:6px;top:-2px}
+  .x-schwelle-fall{right:auto;left:calc(var(--bis) * 1% + 12px);top:42px;bottom:auto;height:0;width:calc((var(--von) - var(--bis)) * 1% - 20px);border-left:0;border-top:2px solid var(--ac-orange)}
+  .x-schwelle-fall::after{left:-2px;bottom:auto;top:-7px;border:6px solid transparent;border-left:0;border-right:8px solid var(--ac-orange)}
+}
+.x-folgen{display:flex;flex-wrap:wrap;justify-content:center;gap:6px clamp(20px,3vw,44px);margin:0;padding:0;list-style:none;font-family:var(--ac-font-display);font-weight:900;line-height:1;font-size:clamp(34px,4.4vw,68px)}
+.x-folgen li{display:flex;align-items:center;gap:.25em}
+.x-folgen svg{flex:none;width:.72em}
+/* Schluss: Folgerung und Unterzeile, breit gesetzt: die Schriftgröße ist so gemessen, dass jede Zeile die volle Breite füllt */
+.x-these-schluss{container-type:inline-size;margin:var(--ac-a-8) 0 0}
+.x-these-fazit{margin:0;font-family:var(--ac-font-display);font-weight:900;font-size:4.25cqi;line-height:.95;white-space:nowrap}
+.x-these-unterzeile{margin:var(--ac-a-3) 0 0;font-family:var(--ac-font-serif);font-style:italic;font-size:4.55cqi;line-height:1.05;white-space:nowrap}
 
 /* ================= 03 Erik: Zeitungsseite ================= */
-.x-zeitung{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--ac-rinne);border-top:5px double var(--ac-text)}
+.x-zeitung{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto 1fr;column-gap:var(--ac-rinne);border-top:5px double var(--ac-text)}
 /* Text links (Spalten 1–8), Foto rechts (9–12) in seiner eigenen Spur: es liegt schräg auf der Doppellinie und bricht oben
-   aus dem Satzspiegel aus, verdeckt aber keinen Text. Die Leiste endet vor dem Foto, damit auch „köln“ lesbar bleibt. */
+   aus dem Satzspiegel aus, verdeckt aber keinen Text. Schlagzeile oben, der Absatz schließt unten mit dem Foto ab. */
 .x-zeitung-titel{grid-column:1/9;grid-row:1;position:relative;z-index:1;margin:var(--ac-a-5) 0 0 !important;font-family:var(--ac-font-display);font-weight:900;
   font-size:clamp(56px,7.4vw,136px);line-height:.84;text-wrap:balance;overflow-wrap:anywhere}
-.x-zeitung-foto{grid-column:9/13;grid-row:1/4;align-self:start;position:relative;z-index:2;margin:calc(-1 * var(--ac-a-5)) 0 0 var(--ac-a-4);aspect-ratio:4/5;rotate:3deg;
+.x-zeitung-foto{grid-column:9/13;grid-row:1/3;align-self:start;position:relative;z-index:2;margin:calc(-1 * var(--ac-a-5)) 0 0 var(--ac-a-4);aspect-ratio:4/5;rotate:3deg;
   border-radius:var(--ac-radius-m);overflow:hidden;background:var(--ac-vertieft);box-shadow:var(--ac-schatten-2)}
 .x-zeitung-foto img{display:block;width:100%;height:100%;object-fit:cover}
-.x-zeitung-unter{grid-column:1/8;grid-row:2;margin:var(--ac-a-5) 0 0;font-size:clamp(26px,2.5vw,40px);line-height:1.16;text-wrap:balance}
-/* Text: eine Spalte in Fließtextgröße, der erste Absatz als Vorspann */
-.x-zeitung-spalten{grid-column:1/9;grid-row:3;margin-top:var(--ac-a-6);padding-top:var(--ac-a-4);border-top:var(--ac-linie-breite) solid var(--ac-text);text-align:left}
-.x-zeitung-spalten p{margin:0 0 .9em;max-width:var(--x-mass);text-wrap:pretty}
-.x-zeitung-spalten p:first-child{max-width:40ch;margin-bottom:var(--ac-a-4);font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead)}
+.x-zeitung-text{grid-column:1/9;grid-row:2;align-self:end;max-width:44ch;margin:var(--ac-a-6) 0 0;padding-top:var(--ac-a-4);border-top:var(--ac-linie-breite) solid var(--ac-text);
+  font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
 
 /* ================= 04 Was ich anbiete ================= */
 .x-angebot-raster{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--ac-a-6) var(--ac-a-8);align-items:start}
 .x-angebot-spalte{position:sticky;top:12vh;height:74vh}
 .x-angebot-buehne{position:absolute;inset:0;will-change:transform}
-/* Canvas nur so groß wie nötig: jedes Pixel kostet beim Rendern */
-.x-angebot-3d{position:absolute !important;inset:0 -6% 0 -4%}
+/* Canvas über den ganzen Bildschirm (die Bühne steht 12vh unter der Oberkante, plus Reserve für ihren Versatz von ±40 px), damit nichts an einer Kante endet.
+   Die Antikörper bleiben über die Fokus-Referenz auf die Bühne gewichtet. */
+.x-angebot-3d{position:absolute !important;top:calc(-12vh - 60px);left:calc(-1 * max(var(--ac-seitenrand),(100vw - var(--ac-max)) / 2 + var(--ac-seitenrand)));width:100vw;height:calc(100vh + 120px)}
+/* alles Lesbare liegt über dem Canvas */
+.x-angebot .ac-kopf,.x-angebot-liste,.x-angebot-cta{position:relative;z-index:1}
 .x-angebot-bild{display:block;width:100%;height:100%;object-fit:contain}
 .x-angebot-spalte{grid-row:1/span 2}
 /* Leistungen: die erste groß (Titel, darunter der Satz im Vorspann-Maß), die übrigen als Zeilen mit Titel links und Satz rechts.
@@ -182,164 +221,10 @@
 .x-leistung:last-child{padding-bottom:var(--ac-a-5)}
 .x-angebot-cta{grid-column:2;margin:var(--ac-a-6) 0 0;padding-top:var(--ac-a-6);border-top:2px solid var(--ac-text)}
 .x-angebot-knopf{min-height:52px;padding:0 26px;font-size:18px;text-decoration:none}  /* <a> als Knopf: ohne Browser-Unterstreichung */
-.x-angebot{padding-bottom:var(--ac-a-8)}
+/* mehr Luft zu „erik“ darüber: Das Foto dort reicht bis fast an die Unterkante */
+.x-angebot{padding-top:calc(var(--ac-sektion) * 1.9);padding-bottom:var(--ac-a-8)}
 
-/* ================= 05 Projekte ================= */
-.x-p-index ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:var(--ac-linie-breite) solid var(--ac-linie)}
-.x-p-index a{display:flex;flex-direction:column;gap:6px;min-height:44px;padding:12px 16px 12px 0;color:var(--ac-text);text-decoration:none;
-  font-family:var(--ac-font-display);font-weight:800;font-size:clamp(22px,2vw,30px);line-height:.95;transition:color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
-.x-p-index a .ac-label{color:var(--ac-orange-tinte)}
-.x-p-index a:hover{color:var(--ac-gruen-tinte)}
-.x-p{padding-top:var(--ac-sektion);scroll-margin-top:88px}
-/* Metazeilen: Wörter in Atkinson, nur Zahlen in Martian Mono (DESIGN §12) */
-.x-p-kopf,.x-meldung-meta{font-size:var(--ac-t-klein);line-height:1.4}
-.x-p-kopf{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;padding-top:var(--ac-a-3);border-top:var(--ac-linie-breite) solid var(--ac-text);color:var(--ac-leise)}
-.x-p-kopf b{color:var(--ac-orange-tinte);font-weight:600}
-
-/* 05.1 Exoskelett: Hand / exo / skelett, das Modul liegt auf der Schrift */
-.x-exo-buehne{position:relative;margin-top:var(--ac-a-5)}
-.x-exo-titel{position:relative;z-index:1;display:flex;flex-direction:column;font-family:var(--ac-font-display);font-weight:900;line-height:.8}
-.x-exo-titel > span{font-size:clamp(92px,17vw,290px)}
-/* einzeiliger Titel („felya labs“): Platz für die Unterlänge, damit das y nicht in den Satz darunter ragt */
-.x-exo-titel > span:only-child{padding-bottom:.17em}
-.x-exo-titel > span:last-child{margin-left:6vw}
-.x-exo-titel > .x-exo-kursiv{font-family:var(--ac-font-serif);font-style:italic;font-weight:400;font-size:clamp(72px,11vw,190px);line-height:.62;margin-left:20vw;color:var(--ac-orange-tinte)}
-.x-exo-bild{position:absolute;z-index:2;right:-3vw;top:30%;width:min(58vw,900px);pointer-events:none}
-img.x-exo-bild,img.x-auftrag-bild,img.x-zahl-bild{height:auto}
-.x-exo-raster{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--ac-a-6) var(--ac-a-8);margin-top:var(--ac-a-8)}
-.x-exo-satz{margin:0 0 var(--ac-a-4);font-size:clamp(24px,2vw,32px);line-height:1.25;text-wrap:pretty}
-.x-exo-rolle{margin:0 0 var(--ac-a-4);color:var(--ac-leise);font-size:var(--ac-t-klein)}
-.x-exo-schritte{list-style:none;margin:0;padding:0}
-.x-exo-schritte li{padding:var(--ac-a-5) 0;border-top:var(--ac-linie-breite) solid var(--ac-linie)}
-.x-exo-schritte h4{font-family:var(--ac-font-display);font-weight:800;font-size:var(--ac-t-h3);line-height:.95;margin-bottom:var(--ac-a-2) !important}
-.x-exo-schritte p{margin:0;max-width:var(--x-mass)}
-
-/* Projektfotos und Clip: rechteckig, runde Ecken, weicher Schatten (.ac-foto), festes Seitenverhältnis */
-.x-bild{margin:0;min-width:0;display:grid;gap:8px;align-content:start}
-/* bis das Foto da ist, steht seine unscharfe Vorschau im Rahmen (Hintergrund aus experiment/vorschau.ts) */
-.x-bild-rahmen{aspect-ratio:var(--r,4/3);width:100%;background-size:cover;background-position:center}
-.x-bild-rahmen::before{content:"";position:absolute;inset:0;background:inherit;filter:blur(14px);transform:scale(1.12)}
-.x-bild-rahmen > :is(img,video){position:relative}
-.x-bild-rahmen :is(img,video){display:block;width:100%;height:100%;object-fit:cover}
-.x-bild-rahmen figcaption{font-size:var(--ac-t-klein);line-height:1.3}
-.x-bild-unter{font-size:var(--ac-t-klein);line-height:1.35;color:var(--ac-leise);max-width:40ch}
-.x-clip-knopf{position:absolute;right:var(--ac-a-3);bottom:var(--ac-a-3);display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:var(--ac-radius-rund);
-  background:var(--ac-glas);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--ac-text);cursor:pointer;transition:background-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
-.x-clip-knopf:hover{background:var(--ac-zart-gruen)}
-.x-clip-knopf:active{background:var(--ac-gruen)}
-
-/* 05.1 mit Fotos: das Hauptfoto ragt von unten in „felya labs“, der Clip bleibt links stehen, darunter ein versetzter Streifen */
-.x-exo-mitfoto .x-exo-raster{margin-top:var(--ac-a-6)}
-.x-exo-hinten{min-width:0}
-.x-exo-foto{position:relative;z-index:2;margin-top:calc(-1 * clamp(24px,4vw,64px));margin-bottom:var(--ac-a-6)}
-.x-exo-foto .ac-foto{border-radius:var(--ac-radius-l);box-shadow:var(--ac-schatten-2)}
-.x-exo-clip{position:sticky;top:96px;margin-top:var(--ac-a-7)}
-.x-exo-schritte .x-exo-schritt-foto{margin-top:var(--ac-a-4);max-width:380px}
-.x-streifen{display:flex;align-items:flex-start;gap:var(--ac-rinne);margin-top:var(--ac-a-8)}
-.x-streifen > .x-bild{flex:var(--r) 1 0}
-.x-streifen > .x-bild:nth-child(even){margin-top:var(--ac-a-7)}
-
-/* Projektblöcke (immobot, inventar per foto, virtubooth, ion like fish): eine Linie, Form nach Material.
-   Kopfzeile, riesiger Titel, das Bild ragt in seine untere Kante, darunter Satz, Abschnitte, Tags. */
-.x-labor{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:auto auto 1fr;column-gap:var(--ac-rinne);align-items:start}
-.x-labor > .x-p-kopf{grid-column:1/-1}
-.x-labor-titel{grid-column:1/-1;grid-row:2;position:relative;z-index:1;margin-top:var(--ac-a-5) !important;font-family:var(--ac-font-display);font-weight:900;
-  font-size:clamp(72px,13vw,230px);line-height:.8;padding-bottom:.06em;overflow-wrap:anywhere}
-.x-labor-medien{grid-row:2/span 2;position:relative;z-index:2;margin-top:calc(var(--ac-a-5) + clamp(48px,6vw,110px))}
-.x-labor-text{grid-row:3;margin-top:var(--ac-a-6)}
-.x-labor-hoch .x-labor-medien{grid-column:8/span 5}
-.x-labor-hoch .x-labor-text{grid-column:1/span 6}
-.x-labor-screens .x-labor-medien{grid-column:6/span 7}
-.x-labor-screens .x-labor-text{grid-column:1/span 5}
-.x-labor-rechts .x-labor-medien{grid-column:7/span 6}
-.x-labor-rechts .x-labor-text{grid-column:1/span 6}
-.x-labor-links .x-labor-titel{text-align:right}
-.x-labor-links .x-labor-medien{grid-column:1/span 6}
-.x-labor-links .x-labor-text{grid-column:7/span 6}
-.x-labor-satz{margin:0 0 var(--ac-a-2);font-size:clamp(22px,1.7vw,28px);line-height:1.3;max-width:32ch;text-wrap:pretty}
-.x-labor-rolle{margin:0 0 var(--ac-a-5);color:var(--ac-leise);font-size:var(--ac-t-klein)}
-.x-labor-satz + .x-teile{margin-top:var(--ac-a-5)}
-.x-labor-haupt{rotate:var(--dreh,0deg)}
-.x-labor-haupt .ac-foto{box-shadow:var(--ac-schatten-2)}
-/* Schild oben, unten liegen die kleinen Fotos drüber */
-.x-labor-haupt figcaption{top:var(--ac-a-3);bottom:auto}
-/* Render: freigestelltes Objekt ohne Rahmen, so groß wie die Spalte, nie höher als der Bildschirm */
-.x-labor-render{display:block;width:100%;height:auto;max-height:min(80vh,780px);object-fit:contain;pointer-events:none;filter:drop-shadow(0 30px 40px rgb(var(--ac-schatten-rgb) / .16))}
-.x-labor-rechts .x-labor-medien{margin-top:calc(var(--ac-a-5) + clamp(20px,3vw,56px))}
-.x-labor-links .x-labor-medien{margin-top:calc(var(--ac-a-5) + clamp(70px,9vw,160px))}
-.x-labor-klein{display:flex;align-items:flex-start;gap:var(--ac-a-4);margin-top:var(--ac-a-5)}
-.x-labor-klein > .x-bild{flex:var(--r) 1 0}
-/* Hochformat: die kleinen liegen versetzt und leicht gedreht, wie hingelegt */
-.x-labor-hoch .x-labor-klein{margin-top:calc(-1 * var(--ac-a-7));padding-inline:var(--ac-a-3)}
-.x-labor-hoch .x-labor-klein > .x-bild:nth-child(odd){rotate:-3deg}
-.x-labor-hoch .x-labor-klein > .x-bild:nth-child(even){rotate:2.5deg;margin-top:var(--ac-a-6)}
-.x-labor-hoch .x-labor-klein .ac-foto{box-shadow:var(--ac-schatten-2)}
-/* Screenshots: die übrigen als breite Reihe über die ganze Seite, versetzt, mit Unterschrift; darunter die Abschnitte in einer Zeile */
-.x-screens{grid-column:1/-1;grid-row:4;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ac-a-6) var(--ac-rinne);margin-top:var(--ac-a-8);align-items:start}
-.x-screens > .x-bild:nth-child(2){margin-top:var(--ac-a-7)}
-.x-screens > .x-bild:nth-child(3){margin-top:var(--ac-a-4)}
-.x-screens .ac-foto{border-radius:var(--ac-radius-m);box-shadow:var(--ac-schatten-2)}
-.x-screens .x-bild-unter{color:var(--ac-text)}
-.x-screens-text{grid-column:1/-1;grid-row:5;margin-top:var(--ac-a-7)}
-/* Abschnitte: Titel als Überschrift, Linie darüber */
-.x-teile{margin:0}
-.x-teile > div{padding:var(--ac-a-4) 0;border-top:var(--ac-linie-breite) solid var(--ac-linie)}
-.x-teile dt{margin-bottom:var(--ac-a-1);font-family:var(--ac-font-display);font-weight:800;font-size:clamp(24px,2vw,32px);line-height:.95}
-.x-teile dd{margin:0;max-width:var(--x-mass)}
-.x-teile-raster{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));column-gap:var(--ac-rinne)}
-/* Tags und Links */
-.x-p-fuss{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ac-a-3) var(--ac-a-5);margin-top:var(--ac-a-5)}
-.x-p-links{display:flex;flex-wrap:wrap;gap:4px 20px;list-style:none;margin:0;padding:0;font-size:var(--ac-t-klein)}
-.x-p-links a{display:inline-flex;align-items:center;min-height:40px;color:var(--ac-text);text-decoration:underline;text-decoration-color:var(--ac-linie);text-underline-offset:.22em;
-  transition:text-decoration-color var(--ac-dauer-kurz) var(--ac-ease-ruhig)}
-.x-p-links a:hover{text-decoration-color:var(--ac-text)}
-
-/* 05.2 laufender Auftrag: helle Fläche, Tablet ragt aus ihr heraus, Kernkompetenzen groß, Ablauf als Pipeline */
-.x-auftrag-feld{margin-inline:var(--ac-a-3);padding:var(--ac-a-6) 0 var(--ac-a-8);border-radius:var(--ac-radius-l);background:var(--ac-flaeche)}
-.x-auftrag .x-p-kopf{border-top:0;padding-top:0}
-.x-auftrag-buehne{position:relative;margin-top:var(--ac-a-5);min-height:clamp(380px,36vw,560px)}
-.x-auftrag-titel{position:relative;z-index:1;max-width:9ch;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(60px,10vw,184px);line-height:.82;padding-bottom:.04em;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
-.x-auftrag-bild{position:absolute;z-index:2;right:-2%;top:-22%;width:min(44vw,640px);pointer-events:none;filter:drop-shadow(0 34px 44px rgb(var(--ac-schatten-rgb) / .2))}
-img.x-auftrag-bild{height:auto}
-.x-auftrag-satz{position:relative;z-index:1;margin:var(--ac-a-6) 0 0;font-size:clamp(22px,1.7vw,28px);line-height:1.3;max-width:30ch;text-wrap:pretty}
-.x-kern-h{margin-bottom:var(--ac-a-4) !important;font-family:var(--ac-font-display);font-weight:800;font-size:24px;line-height:1}
-.x-kern{margin-top:var(--ac-a-8)}
-.x-kern-liste{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ac-a-4) var(--ac-rinne);list-style:none;margin:0;padding:0}
-.x-kern-liste li{padding-top:var(--ac-a-3);border-top:2px solid var(--ac-text);
-  font-family:var(--ac-font-display);font-weight:900;font-size:clamp(28px,2.6vw,46px);line-height:.9;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
-.x-kern-text{margin:var(--ac-a-5) 0 0;max-width:var(--x-mass);font-size:var(--ac-t-lead);line-height:var(--ac-zeile-lead);text-wrap:pretty}
-.x-ablauf-block{margin-top:var(--ac-a-8)}
-.x-ablauf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ac-a-5) var(--ac-rinne);list-style:none;margin:0;padding:0}
-.x-ablauf li{position:relative;display:flex;flex-direction:column;gap:6px;padding-top:40px}
-/* die Leitung läuft durch alle drei Schritte, ein Pfeil zeigt die Richtung */
-.x-ablauf li::before{content:"";position:absolute;left:0;right:calc(-1 * var(--ac-rinne));top:11px;height:2px;background:var(--ac-text)}
-.x-ablauf li:last-child::before{right:0}
-.x-ablauf li:not(:last-child)::after{content:"";position:absolute;right:calc(-1 * var(--ac-rinne) / 2 + 2px);top:6px;width:10px;height:10px;border-top:2px solid var(--ac-text);border-right:2px solid var(--ac-text);transform:rotate(45deg)}
-.x-ablauf-punkt{position:absolute;left:0;top:2px;width:20px;height:20px;border-radius:50%;background:var(--ac-flaeche);border:2px solid var(--ac-text)}
-.x-ablauf-ki .x-ablauf-punkt{background:var(--ac-orange);border-color:var(--ac-orange)}
-.x-ablauf b{font-family:var(--ac-font-display);font-weight:800;font-size:clamp(26px,2.2vw,36px);line-height:.95}
-.x-ablauf span:not(.x-ablauf-punkt){max-width:30ch;line-height:1.45}
-
-/* 05.7 weitere: Kurzmeldungen. Der LED-Kasten bekommt sein Render groß, die 48 steht als Stempel dahinter. */
-.x-weitere-liste{list-style:none;margin:var(--ac-a-5) 0 0;padding:0}
-.x-meldung{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:var(--ac-a-5) var(--ac-rinne);align-items:start;padding:var(--ac-a-6) 0;border-bottom:var(--ac-linie-breite) solid var(--ac-linie)}
-.x-meldung:last-child{border-bottom:0}
-.x-meldung-bild{position:relative;max-width:300px}
-.x-meldung-bild > img{display:block;width:100%;height:auto}
-.x-meldung-meta{display:flex;flex-wrap:wrap;gap:2px 16px;margin:0;color:var(--ac-leise)}
-.x-meldung h4{margin:var(--ac-a-2) 0 var(--ac-a-3) !important;font-family:var(--ac-font-display);font-weight:800;font-size:var(--ac-t-h3);line-height:.95}
-.x-meldung-text p{margin:0 0 var(--ac-a-3);max-width:var(--x-mass)}
-.x-meldung-text .x-meldung-satz{font-size:var(--ac-t-lead);line-height:1.35}
-.x-meldung-text h5{font-family:var(--ac-font-display);font-weight:800;font-size:22px;line-height:1;margin:var(--ac-a-4) 0 var(--ac-a-1)}
-.x-meldung-text .x-p-fuss{margin-top:0}
-.x-meldung-zahl .x-meldung-bild{max-width:440px;padding:clamp(28px,3vw,48px) 0 0 clamp(36px,5vw,80px)}
-.x-meldung-zahl .x-meldung-bild > img{position:relative;z-index:1}
-.x-zahl{position:absolute;left:0;top:0;z-index:0;font-family:var(--ac-font-display);font-weight:900;font-size:clamp(96px,9vw,150px);line-height:.8;letter-spacing:-.02em;color:var(--ac-text)}
-.x-zahl small{font-family:var(--ac-font-serif);font-style:italic;font-weight:400;font-size:.32em;letter-spacing:0}
-/* ohne Foto und Render: die Tags als ruhiges Wortbild */
-.x-wortbild{display:flex;flex-direction:column;gap:4px;padding:var(--ac-a-4) var(--ac-a-5);border-radius:var(--ac-radius-m);background:var(--ac-flaeche);
-  font-family:var(--ac-font-display);font-weight:800;font-size:clamp(24px,2vw,32px);line-height:1;color:var(--ac-leise)}
-.x-wortbild span:first-child{color:var(--ac-text)}
+/* 05 Projekte: experiment/projekte.css */
 
 /* ================= 06 building stuff | Kompetenzen ================= */
 .x-cv-h{margin-bottom:var(--ac-a-5) !important;font-family:var(--ac-font-display);font-weight:800;font-size:var(--ac-t-h3);line-height:.95}
@@ -414,94 +299,50 @@ a.x-kontakt-mail:hover{text-decoration-color:var(--ac-gruen)}
 @media (max-width:899px){
   .x-titel-name{bottom:30%}
   .x-titel-zeichen{right:8%;bottom:calc(30% + 9vw);width:min(46vw,34vh)}
-  .x-titel-pfeil{bottom:120px}
-  .x-bewegt .x-these-bahn{height:160vh}
-  .x-these-platine{top:calc(-1 * clamp(120px,24vw,220px));width:min(62vw,560px)}
-  .x-stufe{grid-column:1/8}
-  .x-stufe:nth-child(2){grid-column:5/13;grid-row:auto;margin-top:0}
+  .x-titel-pfeil{bottom:106px}
+  .x-these-fazit{font-size:clamp(34px,11cqi,72px);line-height:.98;white-space:normal;text-wrap:balance}
+  .x-these-unterzeile{font-size:clamp(25px,7.6cqi,48px);white-space:normal;text-wrap:balance}
+  /* schmal: Der Satz nimmt die volle Breite, die kursive Zeile bricht um. Die Platine liegt rechts neben „noch nicht.“ und ragt nur nach unten. */
+  .x-these-aussage{padding-bottom:12cqi}
+  .x-these-satz{max-width:none}
+  .x-these-laut{font-size:clamp(30px,17cqi,96px)}
+  .x-these-leise{font-size:clamp(26px,14.5cqi,84px)}
+  .x-these-bruch{display:inline}
+  .x-these-platine{top:auto;bottom:.8cqi;right:-5cqi;width:48cqi;margin-top:0}
+  .x-these-text{padding-top:20vh}
+  .x-gegen{grid-template-columns:minmax(0,1fr);justify-items:center;gap:var(--ac-a-4)}
+  .x-gegen-pfeil{rotate:90deg}
+  .x-folgen{font-size:clamp(27px,8.7vw,56px)}
   /* schmal: Leiste, Schlagzeile, Unterzeile, dann das Foto rechts, darunter der Text. Nichts liegt über Text. */
   .x-zeitung-titel{grid-column:1/-1}
-  .x-zeitung-foto{grid-column:5/13;grid-row:3;margin:var(--ac-a-6) var(--ac-a-2) 0 0;max-height:none}
-  .x-zeitung-unter{grid-column:1/-1;grid-row:2}
-  .x-zeitung-spalten{grid-column:1/-1;grid-row:4}
+  .x-zeitung{grid-template-rows:none}
+  .x-zeitung-foto{grid-column:5/13;grid-row:2;margin:var(--ac-a-6) var(--ac-a-2) 0 0;max-height:none}
+  .x-zeitung-text{grid-column:1/-1;grid-row:3;align-self:auto}
   .x-angebot-raster{grid-template-columns:minmax(0,1fr)}
   .x-angebot-spalte{grid-row:auto}
   .x-angebot-cta{grid-column:1}
   .x-angebot-spalte{position:relative;top:auto;height:auto;aspect-ratio:1.15;max-height:56vh;margin-inline:auto;width:100%}
-  .x-p-index ol{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .x-exo-bild{top:38%;width:70vw}
-  .x-exo-raster{grid-template-columns:minmax(0,1fr)}
-  .x-auftrag-buehne{min-height:0}
-  .x-auftrag-bild{position:relative;right:auto;top:auto;display:block;width:min(74vw,440px);margin:-4vw -2vw 0 auto}
-  .x-auftrag-satz{margin-top:var(--ac-a-4)}
-  .x-kern-liste{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .x-ablauf{grid-template-columns:minmax(0,1fr);gap:0}
-  .x-ablauf li{padding:0 0 var(--ac-a-5) 40px}
-  .x-ablauf li::before{left:9px;right:auto;top:20px;bottom:0;width:2px;height:auto}
-  .x-ablauf li:last-child::before{display:none}
-  .x-ablauf li:not(:last-child)::after{display:none}
-  .x-meldung{grid-template-columns:minmax(0,1fr)}
-  .x-labor-render{width:min(100%,460px);max-height:62vh;margin-inline:auto}
-  .x-labor-links .x-labor-titel{text-align:left}
-  .x-screens{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:var(--ac-a-6)}
-  .x-screens > .x-bild:nth-child(n){margin-top:0}
   .x-cv{--zl-text:0px}
   .x-zl-viele{grid-template-columns:minmax(0,1fr);row-gap:var(--ac-a-3)}
   .x-zl-linien{left:0}
   .x-zl-zeile{grid-template-columns:minmax(0,1fr);row-gap:var(--ac-a-2)}
   .x-zl-spur{height:92px}
   .x-cv-komp{grid-template-columns:repeat(2,minmax(0,1fr))}
-  /* schmal: erst Satz und Tags, dann Hauptfoto und Abschnitte, der Clip danach */
-  .x-exo-mitfoto .x-exo-raster{row-gap:0}
-  .x-exo-mitfoto .x-exo-vorn{display:contents}
-  .x-exo-mitfoto .x-exo-hinten{order:1}
-  .x-exo-clip{position:relative;top:auto;order:2;margin-top:var(--ac-a-6)}
-  .x-exo-foto{margin-top:var(--ac-a-6)}
-  .x-labor > *{grid-column:1/-1 !important;grid-row:auto !important}
-  /* riesige Titel über zwei Zeilen: Unterlänge von „p“ stößt sonst in die nächste Zeile */
-  .x-labor-titel{line-height:.92}
-  .x-labor-medien{margin-top:calc(-1 * clamp(8px,2vw,20px))}
-  .x-labor-hoch .x-labor-haupt{width:min(78%,420px);margin-left:auto}
-  .x-labor-rechts .x-labor-medien,.x-labor-links .x-labor-medien{margin-top:calc(-1 * clamp(8px,2vw,20px))}
 }
 @media (max-width:560px){
   .x-kapsel{top:10px;left:10px}
   .x-band{height:72px}
   .x-kapsel-knopf{height:46px;padding:0 16px 2px 12px;gap:8px}
   .x-kapsel-titel{font-size:19px}
-  .x-these-laut{font-size:clamp(46px,13vw,64px)}
-  .x-these-leise{font-size:clamp(40px,11.5vw,56px)}
-  .x-these-platine{top:-140px;right:-8vw;width:80vw}
-  .x-these-text{padding-top:calc(34vw + 40px)}
-  #v-experiment:not(.x-bewegt) .x-these-pin{padding-bottom:170px}
-  .x-these-folge{row-gap:var(--ac-a-7)}
-  .x-stufe{grid-column:1/-1}
-  .x-stufe:nth-child(2){grid-column:3/-1}
-  .x-stufe-wort{font-size:clamp(56px,16vw,72px)}
   .x-these-schluss{margin-top:var(--ac-a-7)}
   .x-zeitung-foto{grid-column:3/13}
   .x-leistung{grid-template-columns:minmax(0,1fr);padding:var(--ac-a-5) 0 var(--ac-a-6)}
   .x-leistung p{padding-left:15%}
   .x-leistung-haupt p{padding-left:0;width:auto;margin-left:15%}
   .x-angebot-cta{margin-top:var(--ac-a-5)}
-  .x-p-index ol{grid-template-columns:minmax(0,1fr)}
-  .x-p-index a{flex-direction:row;align-items:baseline;gap:12px}
-  .x-exo-titel > span:last-child{margin-left:0}
-  .x-exo-titel > .x-exo-kursiv{margin-left:14vw}
-  .x-auftrag-feld{margin-inline:6px}
-  .x-auftrag-titel{line-height:.9}
-  .x-kern-liste li{font-size:clamp(26px,8vw,34px)}
-  .x-screens{grid-template-columns:minmax(0,1fr)}
-  .x-meldung-bild{max-width:240px}
-  .x-meldung-zahl .x-meldung-bild{max-width:320px}
   .x-zl-bild{width:56px;height:56px;left:clamp(0px,calc(var(--x) * 1% - 28px),calc(100% - 56px - var(--rest,0) * 46px))}
   .x-zl-spur{height:80px}
   .x-cv-komp li{font-size:15px}
-  /* Streifen bricht um: Reihen nach Seitenverhältnis (Grundbreite = Verhältnis × 140 px) */
-  .x-streifen{flex-wrap:wrap;gap:var(--ac-a-4) var(--ac-a-3);margin-top:var(--ac-a-6)}
-  .x-streifen > .x-bild{flex:var(--r) 1 calc(var(--r) * 140px)}
-  .x-streifen > .x-bild:nth-child(even){margin-top:0}
-  .x-labor-klein{gap:var(--ac-a-3)}
   .x-fuss-marke{flex-basis:100%}
 }
 @media (pointer:coarse){
@@ -509,4 +350,10 @@ a.x-kontakt-mail:hover{text-decoration-color:var(--ac-gruen)}
 }
 @media (prefers-reduced-motion:reduce){
   .x-kapsel-wechsel{animation:none}
+}
+/* Touch: nur Titel, Karte und Aufschlüsselung rasten ein, weich und nativ; alles andere scrollt frei */
+@media (pointer:coarse) and (prefers-reduced-motion:no-preference){
+  html:has(.x-bewegt){scroll-snap-type:y proximity}
+  .x-titel,.x-bewegt .x-these-halt,.x-these-unten{scroll-snap-align:start}
+  .x-these-unten{scroll-margin-top:max(84px,10vh)}
 }

@@ -6,9 +6,12 @@ import { Abschnittskopf, Markierung } from '../design/Bausteine'
 import { PROJEKT_RENDERS, RENDERS } from '../raum/renders'
 import { Abstossung } from './experiment/Abstossung'
 import { Marke, Zeichen } from './experiment/Marke'
-import { Clip, Foto, Ph, Profilfoto, RenderBild } from './experiment/Bilder'
-import { anteil, auf, medienVon, srcsetVon, verhaeltnis } from './experiment/medien'
+import { Ph, Profilfoto, RenderBild } from './experiment/Bilder'
+import { srcsetVon } from './experiment/medien'
+import { ProjektOverlay, Projekte, useProjektWahl, zeigeProjekt } from './experiment/Projekte'
 import { RechtsDialog, useRecht } from './experiment/Rechtliches'
+import { geheZu, setzeStationen, useStationen } from './experiment/stationen'
+import { Vergleich } from './experiment/Vergleich'
 import { BREIT, RUHIG, Takt, TaktCtx, klemmen, seitenOben, useMedia, useScrollEffekt } from './experiment/scroll'
 import '../design/tokens.css'
 import '../design/bausteine.css'
@@ -24,7 +27,7 @@ const Antikoerper3D = lazy(() => import('../raum/Antikoerper3D').then(m => ({ de
  *   02 ein grüner Körper wächst zum Feld, eine kurze Phrase der These wird beim Scrollen markiert wie ausgewählter Text
  *   03 Zeitungsseite, das Foto schiebt sich über die Schlagzeile
  *   04 schwebende 3D-Antikörper, angepinnt neben den Leistungen
- *   05 Fotos und Renders ragen in die Projekttitel, der laufende Auftrag liegt auf einer eigenen Fläche
+ *   05 die Projekte schweben frei auf einem Feld, groß nach Relevanz; ein Klick öffnet sie als Overlay
  *   06 die Zeitleiste ist eine Grafik: Balken pro Station mit echtem Zeitraum, die übrigen Projekte als Reihe darunter
  *   07 „schreib mir.“ besteht wieder aus abstoßenden Buchstaben
  */
@@ -44,29 +47,6 @@ const GITHUB = 'https://github.com/eneuberg'
 const GESAMT = ABSCHNITTE.length
 const nn = (n: number) => String(n).padStart(2, '0')
 
-// Projekte in Kapiteln, Reihenfolge wie in projekte.ts. Jedes Projekt mit prio 1 oder 2 bekommt ein eigenes Kapitel:
-//   prio 1                          → Hauptprojekt (x-p-exo)
-//   laufender Auftrag (status)      → große Bühne mit Kernkompetenzen und Ablauf (x-p-auftrag)
-//   sonst                           → Projektblock, Form nach Material: Hochformat-Fotos, Screenshots oder Render (links/rechts im Wechsel)
-// prio 3 sammelt „weitere“ am Ende.
-const WEITERE = PROJEKTE.filter(p => p.prio === 3)
-
-type Form = 'hoch' | 'screens' | 'rechts' | 'links'
-type Kapitel = { id: string; titel: string; art: 'exo' | 'auftrag' | 'labor' | 'weitere'; p?: Projekt; form?: Form }
-const KAPITEL: Kapitel[] = []
-let renderSeite = 0
-for (const p of PROJEKTE) {
-  if (p.prio === 3) continue
-  if (p.prio === 1 && !KAPITEL.some(k => k.art === 'exo')) { KAPITEL.push({ id: 'x-p-exo', titel: p.titel, art: 'exo', p }); continue }
-  if (p.art === 'kunde' && p.status && !KAPITEL.some(k => k.art === 'auftrag')) { KAPITEL.push({ id: 'x-p-auftrag', titel: p.titel, art: 'auftrag', p }); continue }
-  const haupt = p.bilder?.[0]
-  const form: Form = haupt ? (verhaeltnis(haupt) < 1 ? 'hoch' : 'screens') : (renderSeite++ % 2 === 0 ? 'rechts' : 'links')
-  KAPITEL.push({ id: `x-p-${p.id}`, titel: p.titel, art: 'labor', p, form })
-}
-if (WEITERE.length) KAPITEL.push({ id: 'x-p-weitere', titel: 'weitere', art: 'weitere' })
-const UNTER = KAPITEL.map(({ id, titel }) => ({ id, titel }))
-const kapitelNr = (id: string) => UNTER.findIndex(u => u.id === id) + 1
-
 const springe = (id: string) => {
   const ruhig = matchMedia(RUHIG).matches
   document.getElementById(id)?.scrollIntoView({ behavior: ruhig ? 'auto' : 'smooth', block: 'start' })
@@ -74,26 +54,21 @@ const springe = (id: string) => {
 
 /* ---------- Beobachter ---------- */
 
-/** Welcher Abschnitt (und welches Projekt-Kapitel) liegt auf der Linie bei 40 % Höhe? Nur IntersectionObserver. */
+/** Welcher Abschnitt liegt auf der Linie bei 40 % Höhe? Nur IntersectionObserver. */
 function useWoBinIch() {
   const [index, setIndex] = useState(0)
-  const [unter, setUnter] = useState(-1)
   useEffect(() => {
-    const ids = [...ABSCHNITTE.map(a => a.id), ...UNTER.map(u => u.id)]
     const io = new IntersectionObserver(eintraege => {
       for (const e of eintraege) {
         if (!e.isIntersecting) continue
-        const id = e.target.id
-        const a = ABSCHNITTE.findIndex(x => x.id === id)
-        if (a >= 0) { setIndex(a); if (id !== 'x-projekte') setUnter(-1) }
-        const u = UNTER.findIndex(x => x.id === id)
-        if (u >= 0) setUnter(u)
+        const a = ABSCHNITTE.findIndex(x => x.id === e.target.id)
+        if (a >= 0) setIndex(a)
       }
     }, { rootMargin: '-40% 0px -59% 0px' })
-    ids.forEach(id => { const el = document.getElementById(id); if (el) io.observe(el) })
+    ABSCHNITTE.forEach(({ id }) => { const el = document.getElementById(id); if (el) io.observe(el) })
     return () => io.disconnect()
   }, [])
-  return { index, unter: index === 4 ? unter : -1 }
+  return index
 }
 
 /** Elemente mit .x-rein bekommen .da, sobald sie ins Bild kommen (einmal). */
@@ -111,7 +86,8 @@ function useRein(wurzel: RefObject<HTMLElement | null>) {
 
 /**
  * true, sobald das Element in die Nähe des Bildschirms kommt, oder vorher im Leerlauf nach dem Titel-Auftritt.
- * WebGL kompiliert beim Start Shader (auf schwachen Geräten einige 100 ms): das soll nicht mitten ins Scrollen fallen.
+ * WebGL kompiliert beim Start Shader (auf schwachen Geräten einige 100 ms): das soll nicht mitten ins Scrollen fallen,
+ * deshalb wartet der Leerlauf-Start, bis seit mindestens 800 ms nicht mehr gescrollt wurde.
  */
 function useNah(ref: RefObject<HTMLElement | null>, rand = '60% 0px') {
   const [nah, setNah] = useState(false)
@@ -120,12 +96,16 @@ function useNah(ref: RefObject<HTMLElement | null>, rand = '60% 0px') {
     if (!el || nah) return
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setNah(true) }, { rootMargin: rand })
     io.observe(el)
-    let leer = 0
-    const timer = setTimeout(() => {
+    let leer = 0, timer = 0, gescrollt = -Infinity
+    const beimScrollen = () => { gescrollt = performance.now() }
+    addEventListener('scroll', beimScrollen, { passive: true })
+    const versuchen = () => {
+      if (performance.now() - gescrollt < 800) { timer = window.setTimeout(versuchen, 400); return }
       if ('requestIdleCallback' in window) leer = requestIdleCallback(() => setNah(true), { timeout: 2000 })
       else setNah(true)
-    }, 2600)
-    return () => { io.disconnect(); clearTimeout(timer); if (leer) cancelIdleCallback(leer) }
+    }
+    timer = window.setTimeout(versuchen, 2600)
+    return () => { io.disconnect(); removeEventListener('scroll', beimScrollen); clearTimeout(timer); if (leer) cancelIdleCallback(leer) }
   }, [ref, rand, nah])
   return nah
 }
@@ -137,20 +117,20 @@ function useNah(ref: RefObject<HTMLElement | null>, rand = '60% 0px') {
  * Navy im Kontakt, sonst Grund). Nur IntersectionObserver auf einem schmalen Streifen oben, nichts pro Bild.
  */
 function useBandFarbe() {
-  const [farbe, setFarbe] = useState<'grund' | 'gruen' | 'navy'>('grund')
+  const [farbe, setFarbe] = useState<'grund' | 'keins' | 'navy'>('grund')
   useEffect(() => {
     const oben = new Set<string>()
     const io = new IntersectionObserver(es => {
       for (const e of es) { if (e.isIntersecting) oben.add(e.target.id); else oben.delete(e.target.id) }
-      setFarbe(oben.has('x-kontakt') ? 'navy' : oben.has('x-these') ? 'gruen' : 'grund')
+      setFarbe(oben.has('x-kontakt') ? 'navy' : oben.has('x-these-bahn') ? 'keins' : 'grund')
     }, { rootMargin: '0px 0px -94% 0px' })
-    for (const id of ['x-these', 'x-kontakt']) { const el = document.getElementById(id); if (el) io.observe(el) }
+    for (const id of ['x-these-bahn', 'x-kontakt']) { const el = document.getElementById(id); if (el) io.observe(el) }
     return () => io.disconnect()
   }, [])
   return farbe
 }
 
-function Kapsel({ index, unter, sichtbar }: { index: number; unter: number; sichtbar: boolean }) {
+function Kapsel({ index, sichtbar }: { index: number; sichtbar: boolean }) {
   const [offen, setOffen] = useState(false)
   const balken = useRef<HTMLSpanElement>(null)
   const css = useMemo(() => typeof CSS !== 'undefined' && CSS.supports('animation-timeline: scroll()'), [])
@@ -173,7 +153,6 @@ function Kapsel({ index, unter, sichtbar }: { index: number; unter: number; sich
   }, [offen])
 
   const titel = ABSCHNITTE[index].titel
-  const unterTitel = unter >= 0 ? UNTER[unter].titel : null
   return (
     <>
     {/* Band über die volle Breite hinter der Kapsel, in der Farbe des Abschnitts darunter, nach unten auslaufend:
@@ -190,9 +169,7 @@ function Kapsel({ index, unter, sichtbar }: { index: number; unter: number; sich
         </span>
         <span className="x-kapsel-ges ac-label" aria-hidden="true">/ {nn(GESAMT)}</span>
         <span className="x-kapsel-titel" aria-hidden="true">
-          <span key={titel + unterTitel} className="x-kapsel-wechsel">
-            {titel}{unterTitel && <em className="x-kapsel-unter"> · {unterTitel}</em>}
-          </span>
+          <span key={titel} className="x-kapsel-wechsel">{titel}</span>
         </span>
         <span className="x-kapsel-balken" aria-hidden="true"><span ref={balken} className={`x-kapsel-fort${css ? ' css' : ''}`} /></span>
       </button>
@@ -206,9 +183,9 @@ function Kapsel({ index, unter, sichtbar }: { index: number; unter: number; sich
                 </button>
                 {a.id === 'x-projekte' && (
                   <ol className="x-menue-unter">
-                    {UNTER.map((u, k) => (
-                      <li key={u.id}><button aria-current={k === unter ? 'true' : undefined} onClick={() => { setOffen(false); springe(u.id) }}>
-                        <span className="ac-label">05.{k + 1}</span>{u.titel}
+                    {PROJEKTE.map((p, k) => (
+                      <li key={p.id}><button aria-haspopup="dialog" onClick={() => { setOffen(false); zeigeProjekt(p.id) }}>
+                        <span className="ac-label">05.{k + 1}</span>{p.titel}
                       </button></li>
                     ))}
                   </ol>
@@ -233,7 +210,7 @@ function Titel({ zeichen }: { zeichen: ReactNode }) {
       <div className="x-titel-name">
         <Abstossung as="h1" className="x-name" text={name} auftritt="laden" heben fit />
       </div>
-      <span className="x-titel-pfeil ac-label" aria-hidden="true">↓</span>
+      <button type="button" className="x-titel-pfeil ac-label" aria-label="weiter zur these" onClick={() => geheZu(1, '#x-these')}>↓</button>
     </section>
   )
 }
@@ -246,15 +223,14 @@ const MARKIERT = 'in den dingen'
 function These() {
   const ruhig = useMedia(RUHIG)
   const bahn = useRef<HTMLDivElement>(null)
-  const kreis = useRef<HTMLDivElement>(null)
+  const karte = useRef<HTMLDivElement>(null)
   const pin = useRef<HTMLDivElement>(null)
   const innen = useRef<HTMLDivElement>(null)
   const satz = useRef<HTMLParagraphElement>(null)
-  const text = useRef<HTMLDivElement>(null)
   const platine = useRef<HTMLDivElement>(null)
-  const stufen = THESE.absaetze.length > 2 ? THESE.absaetze.slice(0, -1) : THESE.absaetze
-  const schluss = THESE.absaetze.length > 2 ? THESE.absaetze[THESE.absaetze.length - 1] : undefined
-
+  const weiter = useRef<HTMLButtonElement>(null)
+  const unten = useRef<HTMLDivElement>(null)
+  useStationen(!ruhig)
   // „ki ist in der software angekommen.“ laut, „in den dingen noch nicht.“ kursiv.
   // Markiert wird nur eine kurze Phrase (Orange nie für ganze Sätze): MARKIERT im letzten Satz, sonst dessen erste drei Wörter.
   const saetze = THESE.titel.split(/(?<=\.)\s+/)
@@ -266,7 +242,7 @@ function These() {
   const worte = saetze.map((s, si) => s.split(' ').map((w, wi) => ({ w, i: si === saetze.length - 1 && wi >= von0 && wi < bis0 ? k++ : -1 })))
   const N = Math.max(1, k)
 
-  const m = useRef({ oben: 0, strecke: 1, els: [] as HTMLElement[], stand: [] as number[], kreis: -1, innen: -1, unten: 0, platH: 1, plat: -1 })
+  const m = useRef({ oben: 0, strecke: 1, els: [] as HTMLElement[], stand: [] as number[], karte: -1, innen: -1, plat: -1 })
   useScrollEffekt({
     messen: vh => {
       const s = m.current, el = bahn.current!
@@ -274,35 +250,40 @@ function These() {
       s.strecke = Math.max(1, el.offsetHeight - vh)
       s.els = [...satz.current!.querySelectorAll<HTMLElement>('[data-w]')]
       s.stand = s.els.map(() => -1)
-      s.kreis = s.innen = s.plat = -1
-      // die Platine wird über ihren (nicht bewegten) Abschnitt gemessen, nicht über sich selbst: ihr transform würde mitzählen
-      s.unten = seitenOben(text.current!)
-      s.platH = platine.current!.offsetHeight
+      s.karte = s.innen = s.plat = -1
+      // Stationen für den Ein-Schritt-Scroll: Titel, Karte (gewachsen und markiert, kurz vor dem Lösen), Aufschlüsselung knapp unter der Kapsel
+      setzeStationen([0, s.oben + s.strecke, seitenOben(unten.current!) - Math.max(84, 0.1 * vh)])
     },
     lesen: (y, vh) => {
       const s = m.current
-      // Der Körper kommt als kleiner Punkt mit dem Abschnitt von unten herein und wächst gleichmäßig mit dem Scrollen,
+      // Die Karte kommt klein mit dem Abschnitt von unten herein und wächst gleichmäßig mit dem Scrollen,
       // schon während der Titel hinausläuft: von 0,75 Bildschirmhöhen vor dem Andocken oben bis 0,15 danach.
-      // smoothstep: ruhiger Anfang, ruhiges Ende, kein Sprung. Steht der Abschnitt oben, ist das Feld fast voll.
+      // smoothstep: ruhiger Anfang, ruhiges Ende, kein Sprung. Steht der Abschnitt oben, ist die Karte fast voll.
       const t = klemmen((y - (s.oben - 0.75 * vh)) / (0.9 * vh))
-      const groesse = 0.035 + 0.965 * t * t * (3 - 2 * t)
-      if (Math.abs(groesse - s.kreis) > 0.0008) {
-        s.kreis = groesse
-        kreis.current!.style.transform = `translate(-50%,-50%) scale(${groesse.toFixed(4)})`
-        // füllt er das Bild, übernimmt die gleichfarbige flache Fläche (deckungsgleich, also unsichtbar): keine riesige Ebene mehr zum Zusammensetzen
-        pin.current!.classList.toggle('gefuellt', groesse >= 0.999)
+      const groesse = 0.12 + 0.88 * t * t * (3 - 2 * t)
+      if (Math.abs(groesse - s.karte) > 0.0008) {
+        s.karte = groesse
+        // steht sie in voller Größe, fällt das transform weg und mit .voll auch die eigene Ebene
+        const voll = groesse >= 0.999
+        karte.current!.style.transform = voll ? 'none' : `scale(${groesse.toFixed(4)})`
+        pin.current!.classList.toggle('voll', voll)
       }
-      // Kopf und Satz blenden schon im wachsenden Körper ein (kein leerer Bildschirm nur mit Kreis)
-      const deck = klemmen((t - 0.42) / 0.38)
-      if (Math.abs(deck - s.innen) > 0.004) { s.innen = deck; innen.current!.style.opacity = deck.toFixed(3) }
-      // Markierung wandert Wort für Wort, wie eine Textauswahl mit der Maus, sobald das Feld steht
-      const von = s.oben + 0.05 * vh, bis = s.oben + Math.max(0.35 * vh, s.strecke - 0.12 * vh)
+      // Kopf und Satz blenden erst ein, wenn die Karte sie fast fasst (kein Text neben der Karte)
+      const deck = klemmen((t - 0.7) / 0.2)
+      if (Math.abs(deck - s.innen) > 0.004) {
+        s.innen = deck
+        innen.current!.style.opacity = deck.toFixed(3)
+        weiter.current!.style.opacity = deck.toFixed(3)
+        weiter.current!.style.pointerEvents = deck < 0.5 ? 'none' : ''
+      }
+      // Markierung wandert Wort für Wort, wie eine Textauswahl mit der Maus, sobald das Feld steht; fertig, wenn sich die Karte löst
+      const von = s.oben + 0.05 * vh, bis = s.oben + s.strecke
       const mp = klemmen((y - von) / (bis - von)) * N
-      // die Platine schwebt über die Unterkante der Bühne herein: hebt sich und richtet sich dabei auf (höchstens 40 px unter ihrem Platz, damit sie nie auf Text rutscht)
-      const pp = klemmen((y + vh - (s.unten - s.platH)) / (vh + s.platH))
+      // die Platine schwebt mit dem Text von unten in ihre Lücke und richtet sich dabei auf (nur transform, bleibt in der Karte)
+      const pp = klemmen((t - 0.6) / 0.4)
       if (Math.abs(pp - s.plat) > 0.002) {
         s.plat = pp
-        platine.current!.style.transform = `translate3d(0,${((0.25 - pp) * 160).toFixed(1)}px,0) rotate(${(-13 + pp * 9).toFixed(2)}deg)`
+        platine.current!.style.transform = `translate3d(0,${((1 - pp) * 60).toFixed(1)}px,0) rotate(${(-13 + pp * 9).toFixed(2)}deg)`
       }
       for (let i = 0; i < s.els.length; i++) {
         const w = Math.round(klemmen(mp - i) * 200) / 200
@@ -317,46 +298,44 @@ function These() {
 
   return (
     <section id="x-these" className="x-these" aria-labelledby="x-these-satz">
-      <div className="x-these-bahn" ref={bahn}>
+      <div className="x-these-bahn" id="x-these-bahn" ref={bahn}>
+        <span className="x-these-halt" aria-hidden="true" />
         <div className="x-these-pin" ref={pin}>
-          <div className="x-these-kreis" ref={kreis} aria-hidden="true" />
+          <div className="x-these-karte" ref={karte} aria-hidden="true" />
           <div className="x-these-innen x-rahmen" ref={innen}>
             <Abschnittskopf nr={2} titel="these" gesamt={GESAMT} />
-            <p className="x-these-satz" id="x-these-satz" ref={satz}>
-              {worte.map((s, si) => (
-                <span key={si} className={si === 0 ? 'x-these-laut' : 'x-these-leise'}>
-                  {s.map(({ w, i }, wi) => (
-                    <Fragment key={wi}>
-                      {i < 0 ? w : <span data-w className={`x-w${ruhig ? ' voll' : ''}`} style={{ '--w': ruhig ? 1 : 0 } as CSSProperties}>{w}</span>}{' '}
-                    </Fragment>
-                  ))}
-                </span>
-              ))}
-            </p>
+            <div className="x-these-aussage">
+              <p className="x-these-satz" id="x-these-satz" ref={satz}>
+                {worte.map((s, si) => (
+                  <span key={si} className={si === 0 ? 'x-these-laut' : 'x-these-leise'}>
+                    {s.map(({ w, i }, wi) => (
+                      <Fragment key={wi}>
+                        {i < 0 ? w : <span data-w className={`x-w${ruhig ? ' voll' : ''}`} style={{ '--w': ruhig ? 1 : 0 } as CSSProperties}>{w}</span>}{' '}
+                        {i === N - 1 && <br className="x-these-bruch" />}
+                      </Fragment>
+                    ))}
+                  </span>
+                ))}
+              </p>
+              {/* die Platine, das echte Ding, liegt in der Lücke rechts neben dem Satz */}
+              <div className="x-these-platine" ref={platine} aria-hidden="true">
+                <RenderBild r={RENDERS.platine} className="x-these-platine-bild" deko />
+              </div>
+            </div>
           </div>
+          <button type="button" className="x-these-weiter" ref={weiter} aria-label="weiter zur aufschlüsselung" onClick={() => geheZu(2, '.x-these-text')}>
+            <span aria-hidden="true">↓</span>
+          </button>
         </div>
       </div>
-      <div className="x-these-text" ref={text}>
-        <div className="x-rahmen x-these-unten">
-          {/* die Platine: echtes Ding zwischen These und Absätzen, ragt nach oben in die Bühne */}
-          <div className="x-these-platine" ref={platine} aria-hidden="true">
-            <RenderBild r={RENDERS.platine} className="x-these-platine-bild" deko />
+      <div className="x-these-text">
+        <div className="x-rahmen x-these-unten" ref={unten}>
+          <Vergleich />
+          {/* die Folgerung aus früher → heute, zwei Zeilen über die volle Breite */}
+          <div className="x-these-schluss">
+            <p className="x-these-fazit">{THESE.schluss}</p>
+            <p className="x-these-unterzeile">{THESE.unterzeile}</p>
           </div>
-          {/* früher → heute als zwei versetzte Stufen, das erste Wort groß. Der Schlussabsatz steht als ruhiger Satz darunter,
-              ohne Gipfel und ohne Orange (keine Vorher-nachher-wir-Folie). */}
-          <div className="x-these-folge">
-            {stufen.map((a, i) => {
-              const [wort, ...rest] = a.split(' ')
-              return (
-                <p key={i} className="x-stufe">
-                  <span className="x-stufe-wort">{wort}</span>{' '}
-                  <span className="x-stufe-rest"><Ph>{rest.join(' ')}</Ph></span>
-                </p>
-              )
-            })}
-          </div>
-          {schluss && <p className="x-these-schluss"><Ph>{schluss}</Ph></p>}
-          <p className="x-these-name">{THESE.name}</p>
         </div>
       </div>
     </section>
@@ -366,22 +345,16 @@ function These() {
 /* ---------- 03 Erik: eine Zeitungsseite ---------- */
 
 function Erik() {
-  // Schlagzeile und Unterzeile aus PERSON.kurz: „Tagsüber …“ / „Abends …“
-  const [schlag, unterzeile] = PERSON.kurz.split(/(?<=\.)\s+/)
   return (
     <section id="x-erik" className="x-sek x-erik">
       <div className="x-rahmen">
         <Abschnittskopf nr={3} titel="erik" gesamt={GESAMT} />
         <article className="x-zeitung">
-          <h3 className="x-zeitung-titel">{schlag}</h3>
+          <h3 className="x-zeitung-titel">{PERSON.kurz}</h3>
           <figure className="x-zeitung-foto x-rein x-objekt">
             <Profilfoto />
           </figure>
-          {unterzeile && <p className="x-zeitung-unter ac-serif">{unterzeile}</p>}
-          {/* eine Spalte in Fließtextgröße: das ist der eigentliche „wer bin ich“-Text, kein Kleingedrucktes */}
-          <div className="x-zeitung-spalten">
-            {PERSON.ueber.map((a, i) => <p key={i}><Ph>{a}</Ph></p>)}
-          </div>
+          <p className="x-zeitung-text">{PERSON.ueber}</p>
         </article>
       </div>
     </section>
@@ -410,7 +383,7 @@ function Angebot() {
     return () => io.disconnect()
   }, [])
 
-  // die Antikörper-Bühne kippt und wandert leicht mit dem Scrollen (nur transform)
+  // die Antikörper-Bühne wandert leicht mit dem Scrollen (nur transform); kippen darf nur das Ersatzbild, beim Canvas wären sonst die Kanten im Bild
   const m = useRef({ oben: 0, hoehe: 1, w: -1 })
   useScrollEffekt({
     messen: () => { const el = sek.current!; m.current.oben = seitenOben(el); m.current.hoehe = el.offsetHeight },
@@ -419,7 +392,7 @@ function Angebot() {
       const p = klemmen((y + vh - s.oben) / (s.hoehe + vh))
       if (Math.abs(p - s.w) < 0.002) return
       s.w = p
-      buehne.current!.style.transform = `translate3d(0,${((0.5 - p) * 80).toFixed(1)}px,0) rotate(${((p - 0.5) * -10).toFixed(2)}deg)`
+      buehne.current!.style.transform = `translate3d(0,${((0.5 - p) * 80).toFixed(1)}px,0)${mit3d ? '' : ` rotate(${((p - 0.5) * -10).toFixed(2)}deg)`}`
     },
   }, !ruhig)
 
@@ -431,7 +404,7 @@ function Angebot() {
           <div className="x-angebot-spalte">
             <div className="x-angebot-buehne" ref={buehne}>
               {mit3d && nah
-                ? <Suspense fallback={ersatz}><Antikoerper3D anzahl={5} material="mix" groesse={0.3} className="x-angebot-3d" /></Suspense>
+                ? <Suspense fallback={ersatz}><Antikoerper3D anzahl={5} material="mix" groesse={0.3} fokus={buehne} className="x-angebot-3d" /></Suspense>
                 : ersatz}
             </div>
           </div>
@@ -449,298 +422,6 @@ function Angebot() {
           </div>
         </div>
       </div>
-    </section>
-  )
-}
-
-/* ---------- 05 Projekte ---------- */
-
-function KapitelKopf({ nr, art, zeit }: { nr: number; art: string; zeit?: string }) {
-  return (
-    <div className="x-p-kopf">
-      <b className="ac-label">05.{nr}</b><span>{art}</span>{zeit && <span><Ph>{zeit}</Ph></span>}
-    </div>
-  )
-}
-
-/** Zeitangabe ohne Wörter, die schon im Label stehen („auftrag · laufend“ + „2026, laufend“ → „2026“; „nebenbei“ nur einmal). */
-function zeitOhneDoppel(p: Projekt) {
-  const z = p.zeitraum.trim()
-  if (!z || z === p.label) return undefined
-  return z.split(/,\s*/).filter(teil => !p.label.includes(teil)).join(', ') || undefined
-}
-const istNotiz = (titel: string) => titel.toLowerCase() === 'notiz'
-
-/** Tags als Chips (höchstens vier) und echte Links (github, Paper). Links mit [Platzhalter] fallen weg. */
-function Fuss({ p }: { p: Projekt }) {
-  const links = (p.links ?? []).filter(l => l.url.startsWith('http'))
-  return (
-    <div className="x-p-fuss">
-      {p.tags.length > 0 && <ul className="ac-chips">{p.tags.slice(0, 4).map(t => <li key={t} className="ac-chip">{t}</li>)}</ul>}
-      {links.length > 0 && (
-        <ul className="x-p-links">
-          {links.map(l => <li key={l.url}><a href={l.url} target="_blank" rel="noreferrer">{l.label} <span aria-hidden="true">↗</span></a></li>)}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-function Exo({ p }: { p: Projekt }) {
-  // „Hand-Exoskelett“ → Hand / exo / skelett (der Schriftmix aus dem Zine)
-  const teile = p.titel.split(/(exo)/i)
-  // Mit Fotos: das Hauptfoto ragt von unten in den Titel, der Clip läuft links neben den Abschnitten, darunter ein Streifen
-  const { haupt, galerie, zuAbschnitt } = medienVon(p, 4)
-  return (
-    <article id="x-p-exo" className={`x-p x-exo x-rahmen${haupt ? ' x-exo-mitfoto' : ''}`}>
-      <KapitelKopf nr={kapitelNr('x-p-exo')} art={p.label} zeit={zeitOhneDoppel(p)} />
-      <div className="x-exo-buehne">
-        <h3 className="x-exo-titel">
-          {teile.length === 3
-            ? <><span>{teile[0].replace(/-$/, '')}</span><span className="x-exo-kursiv">{teile[1].toLowerCase()}</span><span>{teile[2]}</span></>
-            : <span>{p.titel}</span>}
-        </h3>
-        {!haupt && <RenderBild r={PROJEKT_RENDERS[p.id]?.[0]} className="x-exo-bild x-rein x-objekt" />}
-      </div>
-      <div className="x-exo-raster">
-        <div className="x-exo-vorn">
-          <p className="x-exo-satz">{p.satz}</p>
-          {p.rolle && <p className="x-exo-rolle">{p.rolle}</p>}
-          <ul className="ac-chips">{p.tags.slice(0, 4).map(t => <li key={t} className="ac-chip">{t}</li>)}</ul>
-          {p.clip && <Clip clip={p.clip} className="x-exo-clip" />}
-        </div>
-        <div className="x-exo-hinten">
-          {haupt && <Foto src={haupt} ueber className="x-exo-foto x-rein x-objekt" sizes={GROESSE.exo} />}
-          <ol className="x-exo-schritte">
-            {p.abschnitte.map((a, i) => (
-              <li key={a.titel}>
-                <h4>{i === p.abschnitte.length - 1 ? <Markierung art="gruen">{a.titel}</Markierung> : a.titel}</h4>
-                <p><Ph>{a.text}</Ph></p>
-                {zuAbschnitt(a.titel).map(s => <Foto key={s} src={s} className="x-exo-schritt-foto" sizes={GROESSE.schritt} />)}
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-      {galerie.length > 0 && <div className="x-streifen">{galerie.map((s, i) => <Foto key={s} src={s} style={{ '--i': i } as CSSProperties} sizes={streifenGroesse(s, galerie)} />)}</div>}
-    </article>
-  )
-}
-
-/**
- * Laufender Auftrag auf einer hellen Fläche: Titel mit Tablet-Render, darunter „meine rolle“ mit den vier Schwerpunkten
- * groß in einer Zeile (ohne Nummern) und dem Rollentext, dann der Ablauf des Werkzeugs als kleine Pipeline. Die Pipeline
- * ersetzt die Abschnitte „das werkzeug“ und „wo ki reinkommt“ (sie sagt dasselbe, doppelt stand es nur im Weg).
- * Screenshots vom Konzern gibt es nicht, darum zeigt die Pipeline, was das Werkzeug tut.
- */
-const ABLAUF = [
-  { wer: 'teams', was: 'reichen entwürfe für werbung und kommunikation ein' },
-  { wer: 'ki prüft vor', was: 'zum beispiel schriften im entwurf erkennen und vermessen' },
-  { wer: 'design-team', was: 'prüft, ob der entwurf zur marke passt' },
-]
-
-function Auftrag({ p }: { p: Projekt }) {
-  const r = PROJEKT_RENDERS[p.id]?.[0]
-  const rolle = p.abschnitte.find(a => a.titel === 'meine rolle')
-  return (
-    <article id="x-p-auftrag" className="x-p x-auftrag">
-      <div className="x-auftrag-feld">
-        <div className="x-rahmen">
-          <KapitelKopf nr={kapitelNr('x-p-auftrag')} art={p.label} zeit={zeitOhneDoppel(p)} />
-          <div className="x-auftrag-buehne">
-            <h3 className="x-auftrag-titel">{p.titel}</h3>
-            {p.bilder?.[0]
-              ? <Foto src={p.bilder[0]} ueber className="x-auftrag-bild x-rein x-objekt" sizes={GROESSE.auftrag} />
-              : r && <RenderBild r={r} className="x-auftrag-bild x-rein x-objekt" />}
-            <p className="x-auftrag-satz">{p.satz}</p>
-          </div>
-          <div className="x-kern">
-            <h4 className="x-kern-h">{rolle?.titel ?? 'mein teil'}</h4>
-            <ul className="x-kern-liste">
-              {p.tags.slice(0, 4).map(t => <li key={t}>{t}</li>)}
-            </ul>
-            {rolle && <p className="x-kern-text"><Ph>{rolle.text}</Ph></p>}
-          </div>
-          <div className="x-ablauf-block">
-            <h4 className="x-kern-h">so läuft eine prüfung</h4>
-            <ol className="x-ablauf" aria-label="ablauf einer prüfung">
-              {ABLAUF.map((s, i) => (
-                <li key={s.wer} className={i === 1 ? 'x-ablauf-ki' : undefined}>
-                  <span className="x-ablauf-punkt" aria-hidden="true" />
-                  <b>{s.wer}</b>
-                  <span>{s.was}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-          {(p.links ?? []).some(l => l.url.startsWith('http')) && <Fuss p={{ ...p, tags: [] }} />}
-        </div>
-      </div>
-    </article>
-  )
-}
-
-/** Abschnitte eines Projektblocks: Titel als kleine Überschrift, Text darunter, durch Linien getrennt. */
-function Teile({ p, className = '' }: { p: Projekt; className?: string }) {
-  return (
-    <dl className={`x-teile ${className}`}>
-      {p.abschnitte.map(a => <div key={a.titel}><dt>{a.titel}</dt><dd><Ph>{a.text}</Ph></dd></div>)}
-    </dl>
-  )
-}
-
-/**
- * Projektblock mit eigenem Kapitel. Eine Linie für alle: Kopfzeile, riesiger Titel, das Bild ragt in seine untere Kante,
- * Satz in Serif, Abschnitte mit Linien, Tags. Abwechslung über das Material:
- *   hoch     Hochformat-Fotos (ion like fish): Hauptfoto schräg rechts, kleine Fotos versetzt darunter
- *   screens  Screenshots (virtubooth): Hauptbild groß rechts, die übrigen als breite Reihe über die ganze Seite
- *   rechts / links  nur ein Render (immobot, inventar per foto): großes Objekt, im Wechsel rechts und links
- */
-function Labor({ p, form }: { p: Projekt; form: Form }) {
-  const { haupt, galerie } = medienVon(p, 3)
-  const r = PROJEKT_RENDERS[p.id]?.[0]
-  const dreh = `${(p.dreh / 2).toFixed(1)}deg`
-  const id = `x-p-${p.id}`
-  return (
-    <article id={id} className={`x-p x-labor x-rahmen x-labor-${form}`}>
-      <KapitelKopf nr={kapitelNr(id)} art={p.label} zeit={zeitOhneDoppel(p)} />
-      <h3 className="x-labor-titel">{p.titel}</h3>
-      <div className="x-labor-medien">
-        {haupt
-          ? <Foto src={haupt} ueber={form !== 'screens'} className="x-labor-haupt x-rein x-objekt" zuschnitt={form === 'hoch' ? 4 / 5 : undefined} style={{ '--dreh': dreh } as CSSProperties} sizes={form === 'screens' || form === 'hoch' ? GROESSE[form] : GROESSE.seite} />
-          : r && <RenderBild r={r} className="x-labor-render x-rein x-objekt" />}
-        {form === 'hoch' && galerie.length > 0 && (
-          <div className="x-labor-klein">
-            {galerie.map((s, i) => <Foto key={s} src={s} style={{ '--i': i } as CSSProperties} sizes={laborKleinGroesse(s, galerie)} />)}
-          </div>
-        )}
-      </div>
-      <div className="x-labor-text">
-        <p className="x-labor-satz">{p.satz}</p>
-        {p.rolle && <p className="x-labor-rolle"><Ph>{p.rolle}</Ph></p>}
-        {form !== 'screens' && <Teile p={p} />}
-        {form !== 'screens' && <Fuss p={p} />}
-      </div>
-      {form === 'screens' && (
-        <>
-          {galerie.length > 0 && (
-            <div className="x-screens">
-              {galerie.map((s, i) => <Foto key={s} src={s} style={{ '--i': i } as CSSProperties} sizes={GROESSE.screensKlein} />)}
-            </div>
-          )}
-          <div className="x-screens-text">
-            <Teile p={p} className="x-teile-raster" />
-            <Fuss p={p} />
-          </div>
-        </>
-      )}
-    </article>
-  )
-}
-
-/*
- * `sizes` der Projektfotos, nachgemessen an der Anzeigebreite bei 320–2560 px (experiment.css: Umbruch bei 560 und 899).
- * Jeweils eine Spur größer als die Anzeige, damit der Browser nie zu klein wählt.
- */
-const GROESSE = {
-  /** Hauptprojekt: großes Foto hinter dem Text */
-  exo: '(max-width: 899px) calc(100vw - 32px), (max-width: 1440px) 52vw, 740px',
-  /** Foto eines Abschnitts (höchstens 380 px breit) */
-  schritt: '(max-width: 412px) calc(100vw - 32px), 380px',
-  /** Labor, Screenshots: Hauptbild 7 von 12 Spalten */
-  screens: '(max-width: 899px) calc(100vw - 32px), (max-width: 1440px) 54vw, 770px',
-  /** Labor, Hochformat: Hauptbild 5 von 12 Spalten, auf dem Handy höchstens 78 % bzw. 420 px */
-  hoch: '(max-width: 580px) 73vw, (max-width: 899px) 420px, (max-width: 1440px) 38vw, 540px',
-  /** Labor, Foto rechts oder links: 6 von 12 Spalten */
-  seite: '(max-width: 899px) calc(100vw - 32px), (max-width: 1440px) 50vw, 720px',
-  /** Labor, Screenshots darunter zu dritt (zu zweit bis 899) */
-  screensKlein: '(max-width: 560px) calc(100vw - 32px), (max-width: 899px) 46vw, (max-width: 1440px) 30vw, 430px',
-  /** laufender Auftrag: min(44vw, 640px), Handy min(74vw, 440px) */
-  auftrag: '(max-width: 594px) 74vw, (max-width: 899px) 440px, (max-width: 1454px) 44vw, 640px',
-  /** weitere Projekte: Bild höchstens 300 px (mit großer Zahl 440 px) */
-  meldung: '(max-width: 472px) calc(100vw - 32px), 440px',
-  /** Zeitleiste: Vorschau 72 px (Handy 56 px), Ausschnitt per object-fit */
-  zeitleiste: '120px',
-}
-/** Streifen nach Seitenverhältnis (Hauptprojekt-Galerie, kleine Hochformate im Labor). Unter 560 px Umbruch, darum volle Breite. */
-const streifenGroesse = (s: string, reihe: string[]) => {
-  const a = anteil(s, reihe)
-  return `(max-width: 560px) calc(100vw - 32px), (max-width: 1440px) ${auf(a * 88, 'vw')}, ${auf(a * 1250, 'px')}`
-}
-const laborKleinGroesse = (s: string, reihe: string[]) => {
-  const a = anteil(s, reihe)
-  return `(max-width: 899px) ${auf(a * 90, 'vw')}, (max-width: 1440px) ${auf(a * 35, 'vw')}, ${auf(a * 490, 'px')}`
-}
-
-/** Ohne Foto und Render: die Tags als ruhiges Wortbild (wird automatisch durch ein Render ersetzt, sobald es eins gibt). */
-function Wortbild({ p }: { p: Projekt }) {
-  return (
-    <div className="x-wortbild" aria-hidden="true">
-      {p.tags.slice(0, 4).map(t => <span key={t}>{t}</span>)}
-    </div>
-  )
-}
-
-/** Eine große Zahl im Titel („48“) steht als Stempel am Bild. */
-const grosseZahl = (p: Projekt) => p.titel.match(/\b(\d{2,})\b/)?.[1]
-
-function Weitere({ liste }: { liste: Projekt[] }) {
-  return (
-    <article id="x-p-weitere" className="x-p x-weitere x-rahmen">
-      <KapitelKopf nr={kapitelNr('x-p-weitere')} art="weitere" />
-      <ul className="x-weitere-liste">
-        {liste.map(p => {
-          const zahl = grosseZahl(p)
-          const r = PROJEKT_RENDERS[p.id]?.[0]
-          const foto = p.bilder?.[0]
-          const mitTiteln = p.abschnitte.length > 1
-          return (
-            <li key={p.id} className={`x-meldung${zahl ? ' x-meldung-zahl' : ''}${!foto && !r ? ' x-meldung-ohne' : ''}`}>
-              <div className="x-meldung-bild">
-                {zahl && <span className="x-zahl" aria-hidden="true">{zahl}</span>}
-                {foto ? <Foto src={foto} sizes={GROESSE.meldung} /> : r ? <RenderBild r={r} className="x-rein x-objekt" /> : <Wortbild p={p} />}
-              </div>
-              <div className="x-meldung-text">
-                <p className="x-meldung-meta"><span>{p.label}</span>{zeitOhneDoppel(p) && <span>{zeitOhneDoppel(p)}</span>}{p.rolle && <span>{p.rolle}</span>}</p>
-                <h4>{p.titel}</h4>
-                <p className="x-meldung-satz">{p.satz}</p>
-                {p.abschnitte.map(a => (
-                  <Fragment key={a.titel}>
-                    {mitTiteln && !istNotiz(a.titel) && <h5>{a.titel}</h5>}
-                    <p><Ph>{a.text}</Ph></p>
-                  </Fragment>
-                ))}
-                {(p.links ?? []).some(l => l.url.startsWith('http')) && <Fuss p={{ ...p, tags: [] }} />}
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-    </article>
-  )
-}
-
-function Projekte() {
-  return (
-    <section id="x-projekte" className="x-sek x-projekte">
-      <div className="x-rahmen">
-        <Abschnittskopf nr={5} titel="projekte" gesamt={GESAMT} />
-        <nav className="x-p-index" aria-label="Projekte">
-          <ol>
-            {UNTER.map((u, i) => (
-              <li key={u.id}><a href={`#${u.id}`} onClick={e => { e.preventDefault(); springe(u.id) }}><span className="ac-label">05.{i + 1}</span>{u.titel}</a></li>
-            ))}
-          </ol>
-        </nav>
-      </div>
-      {KAPITEL.map(k => {
-        switch (k.art) {
-          case 'exo': return <Exo key={k.id} p={k.p!} />
-          case 'auftrag': return <Auftrag key={k.id} p={k.p!} />
-          case 'labor': return <Labor key={k.id} p={k.p!} form={k.form!} />
-          case 'weitere': return <Weitere key={k.id} liste={WEITERE} />
-        }
-      })}
     </section>
   )
 }
@@ -769,8 +450,6 @@ function projekteZu(s: { was: string; detail: string }) {
   return PROJEKTE.filter(p => stuecke.some(t => p.titel.startsWith(t)))
 }
 
-const kapitelVon = (p: Projekt) => (p.prio === 3 ? 'x-p-weitere' : KAPITEL.find(k => k.p === p)?.id ?? 'x-projekte')
-
 const ALLE_ZL = STATIONEN.map((s, i) => ({ ...s, ...spanne(s.zeit), i, projekte: projekteZu(s) }))
 const STATIONEN_ZL = ALLE_ZL.filter(s => !s.offen).sort((x, y) => x.a - y.a || y.b - x.b)
 const OHNE_JAHR = ALLE_ZL.filter(s => s.offen)
@@ -779,12 +458,11 @@ const mitBild = (liste: Projekt[]) => liste
   .map(p => ({ p, render: PROJEKT_RENDERS[p.id]?.[0], foto: p.bilder?.[0] }))
   .filter(b => b.render || b.foto)
 
-/** Kleines Projektbild als Link zum Kapitel (auf dem Balken absolut gesetzt, in der Reihe im Fluss). */
+/** Kleines Projektbild als Link zum Projekt (auf dem Balken absolut gesetzt, in der Reihe im Fluss). Vorschau 72 px, Handy 56 px. */
 function ZlBild({ b, style }: { b: ReturnType<typeof mitBild>[number]; style?: CSSProperties }) {
-  const ziel = kapitelVon(b.p)
   return (
-    <a className="x-zl-bild" href={`#${ziel}`} style={style} onClick={e => { e.preventDefault(); springe(ziel) }} aria-label={`zum projekt ${b.p.titel}`} title={b.p.titel}>
-      {b.render ? <RenderBild r={b.render} className="x-zl-render" deko /> : <img className="x-zl-foto" sizes={GROESSE.zeitleiste} srcSet={b.foto ? srcsetVon(b.foto) : undefined} src={b.foto} alt="" decoding="async" fetchPriority="low" draggable={false} />}
+    <a className="x-zl-bild" href={`#projekt-${b.p.id}`} style={style} onClick={e => { e.preventDefault(); zeigeProjekt(b.p.id) }} aria-label={`projekt ${b.p.titel} öffnen`} title={b.p.titel}>
+      {b.render ? <RenderBild r={b.render} className="x-zl-render" deko /> : <img className="x-zl-foto" sizes="120px" srcSet={b.foto ? srcsetVon(b.foto) : undefined} src={b.foto} alt="" decoding="async" fetchPriority="low" draggable={false} />}
     </a>
   )
 }
@@ -902,9 +580,10 @@ export function Experiment() {
   const wurzel = useRef<HTMLDivElement>(null)
   const takt = useMemo(() => new Takt(), [])
   const ruhig = useMedia(RUHIG)
-  const { index, unter } = useWoBinIch()
+  const index = useWoBinIch()
   const [titelWeg, setTitelWeg] = useState(false)
   const recht = useRecht()
+  const projekt = useProjektWahl()
 
   useEffect(() => {
     const el = wurzel.current!
@@ -926,17 +605,18 @@ export function Experiment() {
     <TaktCtx.Provider value={takt}>
       {/* Wurzel ohne eigene Landmarke: <main> darf nicht in einer anderen Landmarke stecken */}
       <div className={`view on${ruhig ? '' : ' x-bewegt'}`} id="v-experiment" ref={wurzel}>
-        <Kapsel index={index} unter={unter} sichtbar={titelWeg} />
+        <Kapsel index={index} sichtbar={titelWeg} />
         <main className="x-haupt">
           <Titel zeichen={<Zeichen groesse="100%" akzent="var(--ac-orange)" schwebt titel="" />} />
           <These />
           <Erik />
           <Angebot />
-          <Projekte />
+          <Projekte nr={5} gesamt={GESAMT} />
           <Lebenslauf />
           <Kontakt />
         </main>
         <RechtsDialog {...recht} />
+        <ProjektOverlay id={projekt} />
       </div>
     </TaktCtx.Provider>
   )

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import * as THREE from 'three'
 import { MIX, type MaterialArt, type MaterialWahl } from './farben'
 import { material, gelenkMaterial, studioUmgebung } from './studio'
@@ -24,6 +24,8 @@ export type Antikoerper3DProps = {
   interaktiv?: boolean
   /** Größe eines Antikörpers relativ zur Höhe der Fläche (Standard 0.3). */
   groesse?: number
+  /** Bereich, auf den die Antikörper gewichtet sind; die Fläche selbst darf größer sein, damit sie frei darüber hinaus schweben. Standard: die ganze Fläche. */
+  fokus?: RefObject<HTMLElement | null>
   /** Bild ohne WebGL. Standard: Gruppen-Render passend zum Material. */
   ersatzbild?: string
   className?: string
@@ -31,6 +33,8 @@ export type Antikoerper3DProps = {
 }
 
 const MAX_DPR = 1.75
+/** Mit Fokus ist die Fläche meist bildschirmgroß, jedes Pixel kostet beim Rendern. */
+const MAX_DPR_FOKUS = 1.25
 
 /** PNG-Pfad → WebP daneben (nur für bekannte Renders, sonst gibt es keine WebP). */
 const WEBP_ZU_PNG = new Map<string, string>(Object.values(RENDERS).map(r => [r.png, r.webp]))
@@ -59,24 +63,34 @@ function webglMoeglich(): boolean {
   }
 }
 
-export function Antikoerper3D({ anzahl = 7, material: wahl = 'mix', interaktiv = true, groesse = 0.3, ersatzbild, className = '', style }: Antikoerper3DProps) {
+export function Antikoerper3D({ anzahl = 7, material: wahl = 'mix', interaktiv = true, groesse = 0.3, fokus, ersatzbild, className = '', style }: Antikoerper3DProps) {
   const huelle = useRef<HTMLDivElement>(null)
   const [ohneWebgl, setOhneWebgl] = useState(false)
+  // das Ersatzbild steht nur im Fokusbereich, nicht auf der ganzen Fläche
+  const [ersatzKasten, setErsatzKasten] = useState<CSSProperties>()
 
   useEffect(() => {
     const el = huelle.current
     if (!el) return
-    if (!webglMoeglich()) { setOhneWebgl(true); return }
+    const keinWebgl = () => {
+      const f = fokus?.current
+      if (f) {
+        const r = el.getBoundingClientRect(), q = f.getBoundingClientRect()
+        setErsatzKasten({ position: 'absolute', display: 'block', left: q.left - r.left, top: q.top - r.top, width: q.width, height: q.height })
+      }
+      setOhneWebgl(true)
+    }
+    if (!webglMoeglich()) { keinWebgl(); return }
 
     let renderer: THREE.WebGLRenderer
     try {
       renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' })
     } catch {
-      setOhneWebgl(true)
+      keinWebgl()
       return
     }
     const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, fokus ? MAX_DPR_FOKUS : MAX_DPR))
     renderer.toneMapping = THREE.NeutralToneMapping
     renderer.setClearColor(0x000000, 0)
     const canvas = renderer.domElement
@@ -130,15 +144,17 @@ export function Antikoerper3D({ anzahl = 7, material: wahl = 'mix', interaktiv =
 
     // Weltgröße der sichtbaren Fläche bei z = 0
     let halbB = 1, halbH = 1, einheit = 1
+    // der Bereich, auf den die Antikörper gewichtet sind (Mitte und halbe Größe, Weltkoordinaten)
+    let mitteX = 0, mitteY = 0, bereichB = 1, bereichH = 1
     const verteilen = () => {
       // Heimatpunkte auf einem lockeren Raster, leicht verwackelt
-      const spalten = Math.max(1, Math.round(Math.sqrt(n * (halbB / halbH))))
+      const spalten = Math.max(1, Math.round(Math.sqrt(n * (bereichB / bereichH))))
       const zeilen = Math.ceil(n / spalten)
       const r2 = zufall(5)
       for (let i = 0; i < n; i++) {
         const sx = (i % spalten + 0.5) / spalten, sy = (Math.floor(i / spalten) + 0.5) / zeilen
-        heim[i * 3] = (sx * 2 - 1) * halbB * 0.78 + (r2() - 0.5) * einheit * 0.8
-        heim[i * 3 + 1] = (sy * 2 - 1) * halbH * 0.72 + (r2() - 0.5) * einheit * 0.8
+        heim[i * 3] = mitteX + (sx * 2 - 1) * bereichB * 0.78 + (r2() - 0.5) * einheit * 0.8
+        heim[i * 3 + 1] = mitteY + (sy * 2 - 1) * bereichH * 0.72 + (r2() - 0.5) * einheit * 0.8
         heim[i * 3 + 2] = (r2() - 0.5) * einheit * 2
       }
     }
@@ -149,8 +165,20 @@ export function Antikoerper3D({ anzahl = 7, material: wahl = 'mix', interaktiv =
       kamera.updateProjectionMatrix()
       halbH = Math.tan(THREE.MathUtils.degToRad(kamera.fov / 2)) * kamera.position.z
       halbB = halbH * kamera.aspect
-      // Modell ist ca. 2.1 hoch: auf groesse × Flächenhöhe bringen
-      einheit = (halbH * 2 * groesse) / 2.1
+      const f = fokus?.current
+      if (f) {
+        const r = el.getBoundingClientRect(), q = f.getBoundingClientRect()
+        mitteX = ((q.left + q.width / 2 - r.left) / r.width * 2 - 1) * halbB
+        mitteY = -((q.top + q.height / 2 - r.top) / r.height * 2 - 1) * halbH
+        bereichB = q.width / r.width * halbB
+        bereichH = q.height / r.height * halbH
+      } else {
+        mitteX = mitteY = 0
+        bereichB = halbB
+        bereichH = halbH
+      }
+      // Modell ist ca. 2.1 hoch: auf groesse × Bereichshöhe bringen
+      einheit = (bereichH * 2 * groesse) / 2.1
       verteilen()
     }
     groesseSetzen()
@@ -257,8 +285,9 @@ export function Antikoerper3D({ anzahl = 7, material: wahl = 'mix', interaktiv =
       if (laufen && !raf) { letzte = 0; raf = requestAnimationFrame(frame) }
       if (!laufen && raf) { cancelAnimationFrame(raf); raf = 0 }
     }
-    const io = new IntersectionObserver(([e]) => { imBild = e.isIntersecting; steuern() }, { rootMargin: '100px' })
-    io.observe(el)
+    // Mit Fokus zählt die Bühne: das Canvas ist größer als der Bildschirm und würde sonst schon und noch rendern, wenn nichts davon zu sehen ist.
+    const io = new IntersectionObserver(([e]) => { imBild = e.isIntersecting; steuern() }, { rootMargin: fokus ? '0px' : '100px' })
+    io.observe(fokus?.current ?? el)
     const ro = new ResizeObserver(() => { groesseSetzen(); if (!raf) einmal() })
     ro.observe(el)
     document.addEventListener('visibilitychange', steuern)
@@ -287,14 +316,14 @@ export function Antikoerper3D({ anzahl = 7, material: wahl = 'mix', interaktiv =
       renderer.forceContextLoss()
       canvas.remove()
     }
-  }, [anzahl, wahl, interaktiv, groesse])
+  }, [anzahl, wahl, interaktiv, groesse, fokus])
 
   const ersatz = ersatzbild ?? ANTIKOERPER_RENDER[wahl]
   const ersatzWebp = WEBP_ZU_PNG.get(ersatz)
   return (
     <div ref={huelle} className={`antikoerper3d ${className}`.trim()} style={style} aria-hidden="true">
       {ohneWebgl && (
-        <picture>
+        <picture style={ersatzKasten}>
           {ersatzWebp && <source srcSet={ersatzWebp} type="image/webp" />}
           <img src={ersatz} alt="" draggable={false} decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
         </picture>

@@ -43,8 +43,6 @@ export const CLIPTEXTE: Record<string, { unterschrift: string; masse: [number, n
 
 export const bildtext = (src: string): Bildtext => BILDTEXTE[src] ?? { unterschrift: '', alt: '', masse: [4, 3] }
 
-/** Seitenverhältnis als Zahl (Breite / Höhe). */
-export const verhaeltnis = (src: string) => { const [b, h] = bildtext(src).masse; return b / h }
 
 /* ---------- Responsive Bilder (srcset) ---------- */
 
@@ -77,18 +75,6 @@ export function srcsetVon(src: string): string | undefined {
   if (!f) return undefined
   return [...f.klein.map(w => `${src.replace(/\.webp$/, `-${w}.webp`)} ${w}w`), `${src} ${f.breite}w`].join(', ')
 }
-
-/**
- * Anteil eines Fotos an der Breite einer Flex-Reihe, deren Bilder nach Seitenverhältnis wachsen (`flex: var(--r) 1 0`).
- * `extra`: Seitenverhältnisse weiterer Glieder der Reihe (z. B. ein Clip). Für `sizes` in Galerie-Streifen.
- */
-export function anteil(src: string, reihe: string[], extra = 0) {
-  const summe = reihe.reduce((s, x) => s + verhaeltnis(x), extra)
-  return summe > 0 ? verhaeltnis(src) / summe : 1
-}
-
-/** Länge für `sizes`, auf ganze Einheiten aufgerundet (lieber eine Spur zu groß als unscharf). */
-export const auf = (wert: number, einheit: 'vw' | 'px') => `${Math.ceil(wert)}${einheit}`
 
 /**
  * Bilder eines Projekts aufgeteilt: das erste ist das Hauptbild, Fotos mit `abschnitt` gehören zu diesem Abschnitt,

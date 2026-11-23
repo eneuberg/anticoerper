@@ -6,23 +6,35 @@ export const PERSON = {
   mail: 'erik@nbgr.eu',
   /** Kurz, für Fenster und Fußzeilen */
   intro: 'anticoerper ist erik neuberger, freelancer in köln. ich baue software und hardware, von der firmware bis zur web-app, und baue ki in bestehende abläufe ein.',
-  kurz: 'ich baue software und hardware. zuletzt zwei jahre lang ein hand-exoskelett, mit dem man roboter steuert.',
-  ueber: [
-    'ich bin erik. ich entwickle produkte, software und hardware, als freelancer unter dem namen anticoerper.',
-    'ich studiere code & context an der th köln, eine mischung aus code, design und entrepreneurship. das hat ziemlich geprägt, wie ich heute arbeite.',
-    'meine stärke: systeme erkennen und bessere lösungen dafür finden, eng mit design-teams. am meisten interessiert mich, wie menschen mit maschinen umgehen.',
-  ],
+  kurz: 'ich baue software und hardware.',
+  ueber: 'ich bin erik, freelancer unter dem namen anticoerper. am meisten interessiert mich, wie menschen mit maschinen umgehen, deshalb baue ich beide seiten selbst.',
 }
 
 /** Die These der Seite. */
 export const THESE = {
   titel: 'ki ist in der software angekommen. in den dingen noch nicht.',
-  absaetze: [
-    'früher brauchte ein hardware-produkt ein ganzes team: elektronik, firmware, mechanik, produktion, software. das war teuer, und viele ideen haben sich deshalb nie gelohnt.',
-    'heute kann eine person mit ki-werkzeugen über diese disziplinen hinweg bauen. dinge, die sich früher nicht gelohnt haben, lohnen sich jetzt.',
-    'anticoerper baut solche dinge und bringt ki in systeme, in denen sie noch nicht existiert.',
+  gegen: [
+    { vor: 'früher brauchte hardware ein ganzes', betont: 'team' },
+    { vor: 'heute eine', betont: 'person' },
   ],
-  name: 'anticoerper, von antikörper, in alter schreibweise. antikörper erkennen fremde strukturen und docken an.',
+  /** Schematisch: hoehe = was eine Idee einbringt, frueher/jetzt = Einstiegskosten, alles in Prozent der Graphenhöhe. */
+  kosten: {
+    frueher: 68,
+    jetzt: 14,
+    ideen: [
+      { name: 'auto', hoehe: 96 },
+      { name: 'kühlschrank', hoehe: 82 },
+      { name: 'futterautomat für die katze', hoehe: 38 },
+      { name: 'pflanzen-gießer', hoehe: 32 },
+      { name: 'kunstinstallation', hoehe: 27 },
+      { name: 'led-kasten als geschenk', hoehe: 22 },
+    ],
+    beschreibung: 'schematischer graph: früher lagen die einstiegskosten so hoch, dass sich nur große dinge wie auto und kühlschrank gelohnt haben. mit ki liegen sie viel tiefer, jetzt lohnen sich auch futterautomat für die katze, pflanzen-gießer, kunstinstallation und led-kasten als geschenk.',
+    hinweis: 'schematisch. je größer der balken, desto mehr bringt die idee.',
+  },
+  folgen: ['viel günstiger', 'mehr ideen lohnen sich'],
+  schluss: 'anticoerper baut dinge, die sich früher nicht gelohnt haben.',
+  unterzeile: 'wie ein antikörper: erkennt fremde strukturen und dockt an.',
 }
 
 export const LEISTUNGEN = [

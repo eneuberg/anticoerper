@@ -11,6 +11,8 @@ export type Projekt = {
   art: 'kunde' | 'labor'
   /** 1 = Hauptprojekt, 2 = wichtig, 3 = weiteres */
   prio: 1 | 2 | 3
+  /** Wie groß das Objekt auf dem Projektfeld schwebt */
+  relevanz: 'gross' | 'mittel' | 'klein'
   /** Was für eine Art Projekt, klein, z. B. „startup · mitgründer“. Überschreibt die Anzeige von `art`. */
   label: string
   titel: string
@@ -33,7 +35,7 @@ export type Projekt = {
 
 export const PROJEKTE: Projekt[] = [
   {
-    id: 'exoskelett', art: 'labor', prio: 1, dreh: 5, label: 'startup · mitgründer',
+    id: 'exoskelett', art: 'labor', prio: 1, relevanz: 'gross', dreh: 5, label: 'startup · mitgründer',
     titel: 'felya labs',
     satz: 'ein hand-exoskelett, mit dem man roboter steuert. zwei jahre lang mein hauptprojekt.',
     zeitraum: 'sommer 2024 bis juni 2026',
@@ -50,7 +52,7 @@ export const PROJEKTE: Projekt[] = [
     clip: { mp4: '/projekte/exoskelett/clip-handschuh-studio.mp4', webm: '/projekte/exoskelett/clip-handschuh-studio.webm', poster: '/projekte/exoskelett/clip-handschuh-studio-poster.webp', alt: 'der handschuh öffnet und schließt die finger' },
   },
   {
-    id: 'konzern', art: 'kunde', prio: 2, dreh: -4, label: 'auftrag · laufend',
+    id: 'konzern', art: 'kunde', prio: 2, relevanz: 'gross', dreh: -4, label: 'auftrag · laufend',
     titel: 'markenprüfung für einen konzern',
     satz: 'für einen der größten konzerne deutschlands bauen wir ein werkzeug, mit dem teams werbung und kommunikation gegen die markenrichtlinien prüfen lassen.',
     zeitraum: '2026', status: 'aktuell',
@@ -63,7 +65,7 @@ export const PROJEKTE: Projekt[] = [
     tags: ['backend', 'infrastruktur', 'ki-framework', 'produktentwicklung'],
   },
   {
-    id: 'immobot', art: 'labor', prio: 2, dreh: -3, label: 'eigenes projekt',
+    id: 'immobot', art: 'labor', prio: 2, relevanz: 'mittel', dreh: -3, label: 'eigenes projekt',
     titel: 'immobot',
     satz: 'ein bot, der zu jeder neuen wohnung in köln sofort ein persönliches anschreiben entwirft.',
     zeitraum: '2026',
@@ -81,7 +83,7 @@ export const PROJEKTE: Projekt[] = [
     tags: ['llm', 'agent', 'telegram', 'fredy'],
   },
   {
-    id: 'makerspace', art: 'kunde', prio: 2, dreh: 4, label: 'beim arbeitgeber',
+    id: 'makerspace', art: 'kunde', prio: 2, relevanz: 'mittel', dreh: 4, label: 'beim arbeitgeber',
     titel: 'inventar per foto',
     satz: 'für einen neuen makerspace ein inventar gebaut, in das man teile nur noch fotografiert.',
     zeitraum: '2026',
@@ -94,7 +96,7 @@ export const PROJEKTE: Projekt[] = [
     tags: ['agent', 'claude', 'snipe-it', 'mcp'],
   },
   {
-    id: 'virtubooth', art: 'labor', prio: 2, dreh: -5, label: 'für ein event',
+    id: 'virtubooth', art: 'labor', prio: 2, relevanz: 'mittel', dreh: -5, label: 'für ein event',
     titel: 'virtubooth',
     satz: 'eine ml-pipeline, die fotos live auswertet und auf einem dashboard sichtbar macht, gebaut als fotobox auf den handys von partygästen.',
     zeitraum: '2026',
@@ -110,7 +112,7 @@ export const PROJEKTE: Projekt[] = [
     bilder: ['01-ml-pipeline', '02-beer-cam', '03-admin-gaeste', '04-admin-export'].map(n => `/projekte/virtubooth/${n}.webp`),
   },
   {
-    id: 'ion-like-fish', art: 'labor', prio: 2, dreh: 6, label: 'uni-projekt',
+    id: 'ion-like-fish', art: 'labor', prio: 2, relevanz: 'mittel', dreh: 6, label: 'uni-projekt',
     titel: 'ion like fish',
     satz: 'ein kaputter e-scooter von der straße, aufgeschraubt und zum controller für ein spiel umgebaut.',
     zeitraum: '2024',
@@ -125,7 +127,7 @@ export const PROJEKTE: Projekt[] = [
     bilder: ['01-lenker-aufgebaut', '02-gasknopf', '03-blinkerschalter', '04-spiel'].map(n => `/projekte/ion-like-fish/${n}.webp`),
   },
   {
-    id: 'seedington', art: 'labor', prio: 3, dreh: 3, label: 'uni-projekt',
+    id: 'seedington', art: 'labor', prio: 3, relevanz: 'klein', dreh: 3, label: 'uni-projekt',
     titel: 'seedington',
     satz: 'eine drohne soll samenkugeln auf kahle stadtflächen werfen. ich hab das modell gebaut, das die flächen findet.',
     zeitraum: '2024',
@@ -139,7 +141,7 @@ export const PROJEKTE: Projekt[] = [
     tags: ['u-net', 'pytorch', 'segmentierung', 'drohne'],
   },
   {
-    id: 'un-escap', art: 'labor', prio: 3, dreh: -6, label: 'studierendenprojekt',
+    id: 'un-escap', art: 'labor', prio: 3, relevanz: 'klein', dreh: -6, label: 'studierendenprojekt',
     titel: 'un escap analytics',
     satz: 'studierendenprojekt: ich hab die technik für ein analysetool von un escap geleitet.',
     zeitraum: '2024',
@@ -150,7 +152,7 @@ export const PROJEKTE: Projekt[] = [
     tags: ['web', 'nachhaltigkeit', 'stakeholder'],
   },
   {
-    id: 'led-kasten', art: 'labor', prio: 3, dreh: 7, label: 'geschenk',
+    id: 'led-kasten', art: 'labor', prio: 3, relevanz: 'klein', dreh: 7, label: 'geschenk',
     titel: 'led-kasten in 48 stunden',
     satz: 'in 48 stunden gebaut, als geburtstagsgeschenk für eine freundin.',
     zeitraum: '48 h, 2025',
@@ -161,7 +163,7 @@ export const PROJEKTE: Projekt[] = [
     tags: ['esp32', 'led-matrix', 'geschenk'],
   },
   {
-    id: 'untertitel', art: 'labor', prio: 3, dreh: -2, label: 'nebenbei',
+    id: 'untertitel', art: 'labor', prio: 3, relevanz: 'klein', dreh: -2, label: 'nebenbei',
     titel: 'untertitel-harness',
     satz: 'ein werkzeug, mit dem man ki-untertitel für bildungsvideos schnell prüft und korrigiert.',
     zeitraum: 'nebenbei',
